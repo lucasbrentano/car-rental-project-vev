@@ -8,7 +8,7 @@ spring:
     url: jdbc:mysql://localhost:3306/carrentaldb
     username: username
     password: password
-    initialization-mode: always
+    driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
       ddl-auto: create
