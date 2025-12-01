@@ -255,6 +255,77 @@ Lista consolidada de todos os casos de teste ainda NÃO implementados (❌), agr
 ❌ CT34 RetirarCarroMesmoUsuarioDuasVezes
 
 ---
+## Etapa 7 – GET /orders
+
+### Casos de Sucesso
+❌ CT02 ConsultarPedidosUsuarioComUmPedido
+❌ CT04 ConsultarPedidosUsuarioComPedidoAtivo
+❌ CT05 ConsultarPedidosUsuarioComPedidoConcluido
+❌ CT06 ConsultarPedidosUsuarioComPedidoCancelado
+❌ CT07 ConsultarPedidosUsuarioComPedidoPago
+❌ CT08 ConsultarPedidosUsuarioComPedidoPendente
+❌ CT09 ConsultarPedidosOrdenadoPorDataDesc
+❌ CT10 ConsultarPedidosOrdenadoPorDataAsc
+❌ CT11 ConsultarPedidosComPaginacao
+❌ CT12 ConsultarPedidosPrimeiraPagina
+❌ CT13 ConsultarPedidosUltimaPagina
+❌ CT14 ConsultarPedidosListaVazia
+❌ CT15 ConsultarPedidosAposRetirada
+❌ CT16 ConsultarPedidosComDiferentesCarros
+❌ CT17 ConsultarPedidosComDiferentesPacotes
+
+### Casos de Falha - Autenticação/Autorização
+❌ CT18 ConsultarPedidosSemAutenticacao
+❌ CT19 ConsultarPedidosTokenExpirado
+❌ CT20 ConsultarPedidosTokenInvalido
+❌ CT21 ConsultarPedidosUsuarioInexistente
+❌ CT22 ConsultarPedidosUsuarioBloqueado
+❌ CT23 ConsultarPedidosTokenRevogado
+
+### Casos de Falha - Paginação
+❌ CT24 ConsultarPedidosPageNegativo
+❌ CT25 ConsultarPedidosSizeZero
+❌ CT26 ConsultarPedidosSizeNegativo
+❌ CT27 ConsultarPedidosPageNaoNumerico
+❌ CT28 ConsultarPedidosSizeNaoNumerico
+❌ CT29 ConsultarPedidosPageAlemLimite
+❌ CT30 ConsultarPedidosSizeExcessivo
+
+### Casos de Falha - Ordenação
+❌ CT31 ConsultarPedidosCampoOrdenacaoInvalido
+❌ CT32 ConsultarPedidosDirecaoInvalida
+❌ CT33 ConsultarPedidosFormatoSortIncorreto
+
+### Casos de Falha - Filtros
+❌ CT34 ConsultarPedidosStatusInvalido
+❌ CT35 ConsultarPedidosDataInicioInvalida
+❌ CT36 ConsultarPedidosDataFimInvalida
+❌ CT37 ConsultarPedidosDataInicioMaiorQueFim
+❌ CT38 ConsultarPedidosCarIdInvalido
+
+### Casos de Falha - Combinações
+❌ CT39 ConsultarPedidosMultiplosParametrosInvalidos
+❌ CT40 ConsultarPedidosPaginacaoEOrdenacaoInvalidas
+
+### Casos de Validação - Isolamento de Dados
+❌ CT42 ConsultarPedidosUsuarioAdminVerApenasPropriosPedidos
+
+### Casos de Validação - Conteúdo da Resposta
+❌ CT44 ConsultarPedidosContemIdPedido
+❌ CT45 ConsultarPedidosContemInformacoesCarro
+❌ CT46 ConsultarPedidosContemInformacoesPacote
+❌ CT47 ConsultarPedidosContemDataHoraInicio
+❌ CT48 ConsultarPedidosContemDataHoraFim
+❌ CT49 ConsultarPedidosContemStatusPedido
+❌ CT50 ConsultarPedidosContemValorTotal
+❌ CT51 ConsultarPedidosNaoExpoeDadosSensiveis
+
+### Casos de Performance
+❌ CT52 ConsultarPedidosComGrandeVolumeDados
+❌ CT53 ConsultarPedidosTempoRespostaMenor2Segundos
+❌ CT54 ConsultarPedidosConcorrentementeMultiplosUsuarios
+
+---
 ## Testes de Integração
 
 ### Cenário 1: Jornada Completa de Sucesso (Happy Path)
@@ -397,6 +468,6 @@ Lista consolidada de todos os casos de teste ainda NÃO implementados (❌), agr
 
 ---
 ## Totais
-Total casos unitários não implementados: 226
+Total casos unitários não implementados: 276
 Total casos de integração não implementados: 20
-Total geral: 246
+Total geral: 296
