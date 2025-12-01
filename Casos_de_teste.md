@@ -598,45 +598,158 @@
 
 ---
 
+## Etapa 7: Consultar Pedidos do Usuário
+
+**Endpoint:** `GET /orders`  
+**Técnicas:** Particionamento de Equivalência + Análise de Valor Limite + Regras de Negócio
+
+### Casos de Sucesso (Partição Válida)
+
+| Status | ID | Caso de Teste | Técnica |
+|--------|-----|---------------|---------|
+| ✅ | CT01 | ConsultarPedidosUsuarioAutenticado | Particionamento |
+| ❌ | CT02 | ConsultarPedidosUsuarioComUmPedido | Particionamento |
+| ✅ | CT03 | ConsultarPedidosUsuarioComMultiplosPedidos | Particionamento |
+| ❌ | CT04 | ConsultarPedidosUsuarioComPedidoAtivo | Particionamento |
+| ❌ | CT05 | ConsultarPedidosUsuarioComPedidoConcluido | Particionamento |
+| ❌ | CT06 | ConsultarPedidosUsuarioComPedidoCancelado | Particionamento |
+| ❌ | CT07 | ConsultarPedidosUsuarioComPedidoPago | Particionamento |
+| ❌ | CT08 | ConsultarPedidosUsuarioComPedidoPendente | Particionamento |
+| ❌ | CT09 | ConsultarPedidosOrdenadoPorDataDesc | Particionamento |
+| ❌ | CT10 | ConsultarPedidosOrdenadoPorDataAsc | Particionamento |
+| ❌ | CT11 | ConsultarPedidosComPaginacao | Particionamento |
+| ❌ | CT12 | ConsultarPedidosPrimeiraPagina | Valor Limite |
+| ❌ | CT13 | ConsultarPedidosUltimaPagina | Valor Limite |
+| ❌ | CT14 | ConsultarPedidosListaVazia | Particionamento |
+| ❌ | CT15 | ConsultarPedidosAposRetirada | Regras de Negócio |
+| ❌ | CT16 | ConsultarPedidosComDiferentesCarros | Particionamento |
+| ❌ | CT17 | ConsultarPedidosComDiferentesPacotes | Particionamento |
+
+### Casos de Falha - Autenticação/Autorização
+
+| Status | ID | Caso de Teste | Técnica |
+|--------|-----|---------------|---------|
+| ❌ | CT18 | ConsultarPedidosSemAutenticacao | Particionamento |
+| ❌ | CT19 | ConsultarPedidosTokenExpirado | Particionamento |
+| ❌ | CT20 | ConsultarPedidosTokenInvalido | Particionamento |
+| ❌ | CT21 | ConsultarPedidosUsuarioInexistente | Particionamento |
+| ❌ | CT22 | ConsultarPedidosUsuarioBloqueado | Particionamento |
+| ❌ | CT23 | ConsultarPedidosTokenRevogado | Particionamento |
+
+### Casos de Falha - Paginação
+
+| Status | ID | Caso de Teste | Técnica |
+|--------|-----|---------------|---------|
+| ❌ | CT24 | ConsultarPedidosPageNegativo | Valor Limite |
+| ❌ | CT25 | ConsultarPedidosSizeZero | Valor Limite |
+| ❌ | CT26 | ConsultarPedidosSizeNegativo | Valor Limite |
+| ❌ | CT27 | ConsultarPedidosPageNaoNumerico | Particionamento |
+| ❌ | CT28 | ConsultarPedidosSizeNaoNumerico | Particionamento |
+| ❌ | CT29 | ConsultarPedidosPageAlemLimite | Valor Limite |
+| ❌ | CT30 | ConsultarPedidosSizeExcessivo | Valor Limite |
+
+### Casos de Falha - Ordenação
+
+| Status | ID | Caso de Teste | Técnica |
+|--------|-----|---------------|---------|
+| ❌ | CT31 | ConsultarPedidosCampoOrdenacaoInvalido | Particionamento |
+| ❌ | CT32 | ConsultarPedidosDirecaoInvalida | Particionamento |
+| ❌ | CT33 | ConsultarPedidosFormatoSortIncorreto | Particionamento |
+
+### Casos de Falha - Filtros
+
+| Status | ID | Caso de Teste | Técnica |
+|--------|-----|---------------|---------|
+| ❌ | CT34 | ConsultarPedidosStatusInvalido | Particionamento |
+| ❌ | CT35 | ConsultarPedidosDataInicioInvalida | Particionamento |
+| ❌ | CT36 | ConsultarPedidosDataFimInvalida | Particionamento |
+| ❌ | CT37 | ConsultarPedidosDataInicioMaiorQueFim | Valor Limite |
+| ❌ | CT38 | ConsultarPedidosCarIdInvalido | Particionamento |
+
+### Casos de Falha - Combinações
+
+| Status | ID | Caso de Teste | Técnica |
+|--------|-----|---------------|---------|
+| ❌ | CT39 | ConsultarPedidosMultiplosParametrosInvalidos | Particionamento |
+| ❌ | CT40 | ConsultarPedidosPaginacaoEOrdenacaoInvalidas | Particionamento |
+
+### Casos de Validação - Isolamento de Dados
+
+| Status | ID | Caso de Teste | Técnica |
+|--------|-----|---------------|---------|
+| ✅ | CT41 | ConsultarPedidosNaoExibePedidosOutrosUsuarios | Regras de Negócio |
+| ❌ | CT42 | ConsultarPedidosUsuarioAdminVerApenasPropriosPedidos | Regras de Negócio |
+| ✅ | CT43 | ConsultarPedidosRetornaApenasUsuarioLogado | Regras de Negócio |
+
+### Casos de Validação - Conteúdo da Resposta
+
+| Status | ID | Caso de Teste | Técnica |
+|--------|-----|---------------|---------|
+| ❌ | CT44 | ConsultarPedidosContemIdPedido | Particionamento |
+| ❌ | CT45 | ConsultarPedidosContemInformacoesCarro | Particionamento |
+| ❌ | CT46 | ConsultarPedidosContemInformacoesPacote | Particionamento |
+| ❌ | CT47 | ConsultarPedidosContemDataHoraInicio | Particionamento |
+| ❌ | CT48 | ConsultarPedidosContemDataHoraFim | Particionamento |
+| ❌ | CT49 | ConsultarPedidosContemStatusPedido | Particionamento |
+| ❌ | CT50 | ConsultarPedidosContemValorTotal | Particionamento |
+| ❌ | CT51 | ConsultarPedidosNaoExpoeDadosSensiveis | Particionamento |
+
+### Casos de Performance
+
+| Status | ID | Caso de Teste | Técnica |
+|--------|-----|---------------|---------|
+| ❌ | CT52 | ConsultarPedidosComGrandeVolumeDados | Particionamento |
+| ❌ | CT53 | ConsultarPedidosTempoRespostaMenor2Segundos | Regras de Negócio |
+| ❌ | CT54 | ConsultarPedidosConcorrentementeMultiplosUsuarios | Regras de Negócio |
+
+**Resumo Etapa 7:** 4/54 casos implementados (7.4%)
+
+---
+
 ## Análise Consolidada
 
 ### Cobertura por Técnica de Teste
 
 | Técnica | Total Casos | ✅ Implementados | ❌ Não Implementados | % Cobertura |
 |---------|-------------|------------------|----------------------|-------------|
-| **Particionamento de Equivalência** | 168 | 14 | 154 | 8.3% |
-| **Análise de Valor Limite** | 52 | 2 | 50 | 3.8% |
-| **Regras de Negócio** | 25 | 3 | 22 | 12% |
-| **TOTAL** | **245** | **19** | **226** | **7.8%** |
+| **Particionamento de Equivalência** | 207 | 16 | 191 | 7.7% |
+| **Análise de Valor Limite** | 61 | 2 | 59 | 3.3% |
+| **Regras de Negócio** | 31 | 5 | 26 | 16.1% |
+| **TOTAL** | **299** | **23** | **276** | **7.7%** |
 
 ### Lacunas Críticas por Categoria
 
 | Categoria de Validação | Total Casos | ✅ Testados | ❌ Não Testados | % Risco |
 |------------------------|-------------|-------------|-----------------|---------|
-| **Autenticação/Autorização** | 26 | 0 | 26 | 100% |
+| **Autenticação/Autorização** | 32 | 0 | 32 | 100% |
 | **Validação de Entrada (nulo/vazio)** | 45 | 0 | 45 | 100% |
-| **Valores Limite** | 52 | 2 | 50 | 96.2% |
-| **Regras de Negócio** | 25 | 3 | 22 | 88% |
-| **Estado do Sistema** | 18 | 3 | 15 | 83.3% |
+| **Valores Limite** | 61 | 2 | 59 | 96.7% |
+| **Regras de Negócio** | 31 | 5 | 26 | 83.9% |
+| **Estado do Sistema** | 26 | 3 | 23 | 88.5% |
 | **Formatação de Dados** | 31 | 2 | 29 | 93.5% |
-| **Combinações** | 15 | 0 | 15 | 100% |
+| **Combinações** | 17 | 0 | 17 | 100% |
 | **Concorrência** | 6 | 0 | 6 | 100% |
-
-### Priorização de Implementação
+| **Isolamento de Dados** | 3 | 2 | 1 | 33.3% |
+| **Performance** | 3 | 0 | 3 | 100% |
 
 #### 🔴 PRIORIDADE CRÍTICA (Implementar Imediatamente)
-- **Autenticação/Autorização**: 0/26 casos (0%)
+- **Autenticação/Autorização**: 0/32 casos (0%)
 - **Validação de Entrada**: 0/45 casos (0%)
+- **Isolamento de Dados (Etapa 7)**: 2/3 casos (66.7%) - ✅ Parcialmente coberto
 - **Segurança (Etapa 6)**: Validação de carro pertence ao usuário
-
 #### 🟠 PRIORIDADE ALTA
+- **Valores Limite**: 2/61 casos (3.3%)
+- **Regras de Negócio**: 5/31 casos (16.1%) - ✅ Melhorou com Etapa 7
+- **Atualização de Estado**: Pedidos e carros
+- **Conteúdo de Resposta (Etapa 7)**: Validação de estrutura de dados retornados
 - **Valores Limite**: 2/52 casos (3.8%)
 - **Regras de Negócio**: 3/25 casos (12%)
 - **Atualização de Estado**: Pedidos e carros
 
-#### 🟡 PRIORIDADE MÉDIA
-- **Formatação de Dados**: Cartões, datas, valores
-- **Combinações**: Múltiplos erros simultâneos
+#### 🟢 PRIORIDADE BAIXA
+- **Concorrência**: Testes de race condition
+- **Performance**: Testes de carga e tempo de resposta
+- **Casos extremos**: Edge cases específicosos
 
 #### 🟢 PRIORIDADE BAIXA
 - **Concorrência**: Testes de race condition
@@ -649,28 +762,72 @@
 ### Metas de Cobertura Sugeridas
 
 | Fase | Meta | Prazo Sugerido |
-|------|------|----------------|
-| **Fase 1** | 40% de cobertura | 2 semanas |
-| **Fase 2** | 70% de cobertura | 4 semanas |
-| **Fase 3** | 90% de cobertura | 6 semanas |
-
 ### Ordem de Implementação Recomendada
 
 1. **Semana 1-2**: Autenticação + Validação de Entrada (Todas as etapas)
-2. **Semana 3-4**: Valores Limite + Regras de Negócio (Etapas 4, 5, 6)
-3. **Semana 5-6**: Formatação + Combinações + Testes de Integração
+2. **Semana 3-4**: Valores Limite + Regras de Negócio (Etapas 4, 5, 6, 7)
+3. **Semana 5-6**: Isolamento de Dados (Etapa 7) + Formatação + Combinações
+4. **Semana 7-8**: Performance + Testes de Integração
+### Ordem de Implementação Recomendada
 
 ### Riscos Atuais em Produção
 
 | Risco | Severidade | Etapas Afetadas |
 |-------|------------|-----------------|
-| Sem validação de autenticação | 🔴 CRÍTICO | Todas (2-6) |
+| Sem validação de autenticação | 🔴 CRÍTICO | Todas (2-7) |
 | Sem validação de entrada | 🔴 CRÍTICO | Todas |
-| Usuário pode acessar recursos de outro usuário | 🔴 CRÍTICO | 2, 6 |
+| Usuário pode acessar recursos de outro usuário | 🔴 CRÍTICO | 2, 6, 7 |
+| Vazamento de dados entre usuários (GET /orders) | 🔴 CRÍTICO | 7 |
 | Sem validação de estado de pedido | 🟠 ALTO | 5, 6 |
 | Sem validação de valores limite | 🟡 MÉDIO | Todas |
+| Performance não testada com grande volume | 🟡 MÉDIO | 7 |2-6) |
+| Sem validação de entrada | 🔴 CRÍTICO | Todas |
+**Documento gerado em:** 01/12/2024  
+**Versão:** 1.2  
+**Total de Casos de Teste:** 299  
+**Casos Implementados:** 23 (7.7%)  
+**Casos Pendentes:** 276 (92.3%)
 
 ---
+
+## Notas sobre Testes Existentes da Etapa 7
+
+### Testes Implementados:
+
+**OrderControllerTest.java:**
+- ✅ **CT01**: `itShouldGetAllOrders()` - Consulta básica de pedidos (controller mock)
+
+**OrderServiceTest.java:**
+- ✅ **CT03**: `itShouldReturnAllOrders()` - Consulta com múltiplos pedidos (4 pedidos de diferentes usuários)
+
+**IT07_UsuarioSoRetiraProprioCarroPedido.java:**
+- ✅ **CT41**: Validação de isolamento - usuário não vê/acessa pedidos de outros
+- ✅ **CT43**: Validação de ownership através de LoggedInUser - apenas pedidos do usuário logado
+
+### Observações Importantes:
+
+1. **Isolamento de Dados**: Os testes de integração IT07 validam **indiretamente** o isolamento através do sistema de AccessKey, mas **NÃO testam explicitamente** se GET /orders retorna apenas pedidos do usuário logado. O teste valida que apenas o dono do AccessKey pode retirar o carro, não a listagem de pedidos.
+
+2. **Lacuna Crítica**: Embora o sistema implemente controle de acesso via AccessKey, **não há teste explícito** validando que:
+   - GET /orders filtra por usuário logado
+   - Usuário A não vê pedidos do Usuário B na resposta HTTP
+   - Admin vê apenas próprios pedidos
+
+3. **Testes de Unidade vs Integração**: 
+   - Testes de controller/service retornam TODOS os pedidos (`orderRepository.findAll()`)
+   - Não há filtro por usuário implementado nos testes
+   - Possível **BUG DE SEGURANÇA** se o código real não filtra por usuário
+
+### Recomendação:
+Criar teste de integração específico para GET /orders que valide:
+```java
+@Test
+void deveRetornarApenaspedidosDoUsuarioLogado() {
+    // Given: Usuário A tem 2 pedidos, Usuário B tem 1 pedido
+    // When: Usuário A chama GET /orders
+    // Then: Retorna apenas 2 pedidos (de A), não retorna pedido de B
+}
+```
 
 **Documento gerado em:** 30/11/2024  
 **Versão:** 1.0  
