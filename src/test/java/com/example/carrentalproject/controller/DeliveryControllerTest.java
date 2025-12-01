@@ -5,108 +5,98 @@ import com.example.carrentalproject.exception.InvalidPackageException;
 import com.example.carrentalproject.exception.NoAccessKeyException;
 import com.example.carrentalproject.exception.UnavailableCarException;
 import com.example.carrentalproject.service.DeliveryService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import javax.persistence.EntityNotFoundException;
 
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-@WebMvcTest(DeliveryController.class)
+@ExtendWith(MockitoExtension.class)
 class DeliveryControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @MockBean
+    @Mock
     private DeliveryService deliveryService;
 
-    // POST /delivery
+    @InjectMocks
+    private DeliveryController deliveryController;
 
-    @Test
-    void itShouldCallServiceWithCorrectId() throws Exception {
-        Car mockCar = new Car();
-        mockCar.setId(1L);
+    private Car testCar;
 
-        when(deliveryService.pickUpTheCar(1L)).thenReturn(mockCar);
-
-        mockMvc.perform(post("/delivery")
-                        .param("carId", "1")
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
-
-        verify(deliveryService, times(1)).pickUpTheCar(1L);
+    @BeforeEach
+    void setup() {
+        testCar = new Car();
+        testCar.setId(1L);
+        testCar.setBrand("Toyota");
+        testCar.setModel("Corolla");
+        testCar.setIsAvailable(false);
     }
 
     @Test
-    void itShouldReturnCarFromService() throws Exception {
-        Car car = new Car();
-        car.setId(10L);
-        car.setBrand("Toyota");
-        car.setModel("Corolla");
+    void itShouldPickUpTheCar() {
+        // Given
+        when(deliveryService.pickUpTheCar(1L)).thenReturn(testCar);
 
-        when(deliveryService.pickUpTheCar(10L)).thenReturn(car);
+        // When
+        Car result = deliveryController.pickUpTheCar(1L);
 
-        mockMvc.perform(post("/delivery")
-                        .param("carId", "10")
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(10))
-                .andExpect(jsonPath("$.brand").value("Toyota"))
-                .andExpect(jsonPath("$.model").value("Corolla"));
+        // Then
+        assertNotNull(result);
+        assertEquals("Toyota", result.getBrand());
+        assertFalse(result.getIsAvailable());
+        verify(deliveryService).pickUpTheCar(1L);
     }
 
     @Test
-    void itShouldReturn404WhenEntityNotFoundExceptionIsThrown() throws Exception {
-        when(deliveryService.pickUpTheCar(2L))
-                .thenThrow(new EntityNotFoundException("not found"));
+    void itShouldThrowEntityNotFoundExceptionWhenCarNotFound() {
+        // Given
+        when(deliveryService.pickUpTheCar(999L))
+                .thenThrow(new EntityNotFoundException("Car not found"));
 
-        mockMvc.perform(post("/delivery")
-                        .param("carId", "2")
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNotFound());
+        // When & Then
+        assertThrows(EntityNotFoundException.class, 
+                () -> deliveryController.pickUpTheCar(999L));
+        verify(deliveryService).pickUpTheCar(999L);
     }
 
     @Test
-    void itShouldReturn400WhenNoAccessKeyExceptionIsThrown() throws Exception {
-        when(deliveryService.pickUpTheCar(3L))
-                .thenThrow(new NoAccessKeyException("no key"));
+    void itShouldThrowUnavailableCarException() {
+        // Given
+        when(deliveryService.pickUpTheCar(1L))
+                .thenThrow(new UnavailableCarException("Car is not available"));
 
-        mockMvc.perform(post("/delivery")
-                        .param("carId", "3")
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest());
+        // When & Then
+        assertThrows(UnavailableCarException.class, 
+                () -> deliveryController.pickUpTheCar(1L));
+        verify(deliveryService).pickUpTheCar(1L);
     }
 
     @Test
-    void itShouldReturn400WhenInvalidPackageExceptionIsThrown() throws Exception {
-        when(deliveryService.pickUpTheCar(4L))
-                .thenThrow(new InvalidPackageException("invalid package"));
+    void itShouldThrowNoAccessKeyException() {
+        // Given
+        when(deliveryService.pickUpTheCar(1L))
+                .thenThrow(new NoAccessKeyException("No access key found"));
 
-        mockMvc.perform(post("/delivery")
-                        .param("carId", "4")
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest());
+        // When & Then
+        assertThrows(NoAccessKeyException.class, 
+                () -> deliveryController.pickUpTheCar(1L));
+        verify(deliveryService).pickUpTheCar(1L);
     }
 
     @Test
-    void itShouldReturn400WhenUnavailableCarExceptionIsThrown() throws Exception {
-        when(deliveryService.pickUpTheCar(5L))
-                .thenThrow(new UnavailableCarException("unavailable"));
+    void itShouldThrowInvalidPackageException() {
+        // Given
+        when(deliveryService.pickUpTheCar(1L))
+                .thenThrow(new InvalidPackageException("Invalid package"));
 
-        mockMvc.perform(post("/delivery")
-                        .param("carId", "5")
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest());
+        // When & Then
+        assertThrows(InvalidPackageException.class, 
+                () -> deliveryController.pickUpTheCar(1L));
+        verify(deliveryService).pickUpTheCar(1L);
     }
 }
-

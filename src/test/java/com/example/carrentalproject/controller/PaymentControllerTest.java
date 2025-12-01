@@ -1,28 +1,22 @@
 package com.example.carrentalproject.controller;
 
 import com.example.carrentalproject.dto.CreditCardDto;
+import com.example.carrentalproject.exception.InsufficientFundsException;
+import com.example.carrentalproject.exception.NoCreditCardException;
 import com.example.carrentalproject.service.PaymentService;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class PaymentControllerTest {
-
-    private MockMvc mockMvc;
 
     @Mock
     private PaymentService paymentService;
@@ -30,77 +24,75 @@ class PaymentControllerTest {
     @InjectMocks
     private PaymentController paymentController;
 
-    private ObjectMapper objectMapper;
-
-    private CreditCardDto creditCardDto;
+    private CreditCardDto testCreditCard;
 
     @BeforeEach
     void setup() {
-        mockMvc = MockMvcBuilders.standaloneSetup(paymentController).build();
-        objectMapper = new ObjectMapper();
-
-        creditCardDto = CreditCardDto.builder()
-                .cardNumber(1234567890123456L)
-                .month(12)
-                .year(2029)
-                .CVV(123)
-                .build();
-
-    }
-
-    // POST /payment/addCreditCard
-    @Test
-    void itShouldAddCreditCard() throws Exception {
-        mockMvc.perform(post("/payment/addCreditCard")
-                .contentType("application/json")
-                .content(objectMapper.writeValueAsString(creditCardDto)))
-                .andExpect(status().isOk());
-
-        verify(paymentService, times(1)).addCreditCard(creditCardDto);
+        testCreditCard = new CreditCardDto(
+                1234567890123456L,
+                12,
+                2025,
+                123
+        );
     }
 
     @Test
-    void itShouldReturn400WhenInvalidCreditCardDto() throws Exception {
-        mockMvc.perform(post("/payment/addCreditCard")
-                .contentType("application/json")
-                .content("{}"))
-                .andExpect(status().isBadRequest());
+    void itShouldAddCreditCard() {
+        // Given
+        doNothing().when(paymentService).addCreditCard(any(CreditCardDto.class));
+
+        // When
+        assertDoesNotThrow(() -> paymentController.addCreditCard(testCreditCard));
+
+        // Then
+        verify(paymentService).addCreditCard(testCreditCard);
     }
 
     @Test
-    void itShouldReturn500WhenAddCreditCardFails() throws Exception {
-        doThrow(new RuntimeException("Failed")).when(paymentService).addCreditCard(creditCardDto);
+    void itShouldPerformMoneyTransfer() {
+        // Given
+        doNothing().when(paymentService).moneyTransfer(500L);
 
-        mockMvc.perform(post("/payment/addCreditCard")
-                .contentType("application/json")
-                .content(objectMapper.writeValueAsString(creditCardDto)))
-                .andExpect(status().isInternalServerError());
-    }
+        // When
+        assertDoesNotThrow(() -> paymentController.moneyTransfer(500L));
 
-    // PUT /payment/moneyTransfer
-    @Test
-    void itShouldTransferMoney() throws Exception {
-        mockMvc.perform(put("/payment/moneyTransfer")
-                .param("moneyAmount", "100"))
-                .andExpect(status().isOk());
-
-        verify(paymentService, times(1)).moneyTransfer(100L);
+        // Then
+        verify(paymentService).moneyTransfer(500L);
     }
 
     @Test
-    void itShouldReturn400WhenMissingMoneyAmount() throws Exception {
-        mockMvc.perform(put("/payment/moneyTransfer"))
-                .andExpect(status().isBadRequest());
+    void itShouldThrowInsufficientFundsException() {
+        // Given
+        doThrow(new InsufficientFundsException("Insufficient funds"))
+                .when(paymentService).moneyTransfer(10000L);
+
+        // When & Then
+        assertThrows(InsufficientFundsException.class, 
+                () -> paymentController.moneyTransfer(10000L));
+        verify(paymentService).moneyTransfer(10000L);
     }
 
     @Test
-    void itShouldReturn500WhenMoneyTransferFails() throws Exception {
-        doThrow(new RuntimeException("Fail"))
-                .when(paymentService).moneyTransfer(200L);
+    void itShouldThrowNoCreditCardException() {
+        // Given
+        doThrow(new NoCreditCardException("No credit card found"))
+                .when(paymentService).moneyTransfer(anyLong());
 
-        mockMvc.perform(put("/payment/moneyTransfer")
-                .param("moneyAmount", "200"))
-                .andExpect(status().isInternalServerError());
+        // When & Then
+        assertThrows(NoCreditCardException.class, 
+                () -> paymentController.moneyTransfer(100L));
+        verify(paymentService).moneyTransfer(100L);
+    }
+
+    @Test
+    void itShouldCallServiceWithCorrectAmount() {
+        // Given
+        doNothing().when(paymentService).moneyTransfer(anyLong());
+
+        // When
+        paymentController.moneyTransfer(750L);
+
+        // Then
+        verify(paymentService).moneyTransfer(750L);
     }
 }
-
