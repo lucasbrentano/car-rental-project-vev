@@ -416,4 +416,475 @@ class Step5_PaymentJourneyTest {
         assertEquals(initialBalance, validUser.getCreditCard().getAccountBalance());
         assertEquals(1000L, validUser.getCreditCard().getAccountBalance());
     }
+
+    // ==================== TESTES ADICIONAIS DE COBERTURA ====================
+
+    @Test
+    @DisplayName("TC16: Adicionar cartão com CVV mínimo (1)")
+    void shouldAddCreditCard_WithMinimumCVV() {
+        // Arrange
+        CreditCardDto cardWithMinCVV = CreditCardDto.builder()
+                .cardNumber(1111222233334444L)
+                .month(6)
+                .year(2026)
+                .CVV(1) // CVV mínimo
+                .build();
+
+        CreditCard savedCard = CreditCard.builder()
+                .id(1L)
+                .cardNumber(cardWithMinCVV.getCardNumber())
+                .month(cardWithMinCVV.getMonth())
+                .year(cardWithMinCVV.getYear())
+                .CVV(cardWithMinCVV.getCVV())
+                .accountBalance(0L)
+                .build();
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(creditCardRepository.save(any(CreditCard.class))).thenReturn(savedCard);
+        when(userRepository.save(any(User.class))).thenReturn(validUser);
+
+        // Act
+        paymentService.addCreditCard(cardWithMinCVV);
+
+        // Assert
+        assertNotNull(validUser.getCreditCard());
+        assertEquals(1, validUser.getCreditCard().getCVV());
+    }
+
+    @Test
+    @DisplayName("TC17: Adicionar cartão com CVV máximo (999)")
+    void shouldAddCreditCard_WithMaximumCVV() {
+        // Arrange
+        CreditCardDto cardWithMaxCVV = CreditCardDto.builder()
+                .cardNumber(5555666677778888L)
+                .month(11)
+                .year(2028)
+                .CVV(999) // CVV máximo
+                .build();
+
+        CreditCard savedCard = CreditCard.builder()
+                .id(1L)
+                .cardNumber(cardWithMaxCVV.getCardNumber())
+                .month(cardWithMaxCVV.getMonth())
+                .year(cardWithMaxCVV.getYear())
+                .CVV(cardWithMaxCVV.getCVV())
+                .accountBalance(0L)
+                .build();
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(creditCardRepository.save(any(CreditCard.class))).thenReturn(savedCard);
+        when(userRepository.save(any(User.class))).thenReturn(validUser);
+
+        // Act
+        paymentService.addCreditCard(cardWithMaxCVV);
+
+        // Assert
+        assertEquals(999, validUser.getCreditCard().getCVV());
+    }
+
+    @Test
+    @DisplayName("TC18: Transferir valor muito grande (1000000)")
+    void shouldTransferMoney_WithVeryLargeAmount() {
+        // Arrange
+        validUser.setCreditCard(existingCreditCard);
+        Long initialBalance = existingCreditCard.getAccountBalance();
+        Long transferAmount = 1000000L; // 1 milhão
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(userRepository.save(any(User.class))).thenReturn(validUser);
+
+        // Act
+        paymentService.moneyTransfer(transferAmount);
+
+        // Assert
+        assertEquals(initialBalance + transferAmount, validUser.getCreditCard().getAccountBalance());
+        assertEquals(1001000L, validUser.getCreditCard().getAccountBalance());
+    }
+
+    @Test
+    @DisplayName("TC19: Transferir valor 100 - valor típico comum")
+    void shouldTransferMoney_WithTypicalAmount() {
+        // Arrange
+        validUser.setCreditCard(existingCreditCard);
+        Long transferAmount = 100L;
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(userRepository.save(any(User.class))).thenReturn(validUser);
+
+        // Act
+        paymentService.moneyTransfer(transferAmount);
+
+        // Assert
+        assertEquals(1100L, validUser.getCreditCard().getAccountBalance()); // 1000 + 100
+    }
+
+    @Test
+    @DisplayName("TC20: Propriedade - Operação de adicionar cartão é atômica")
+    void shouldPerformAtomicOperation_WhenAddingCreditCard() {
+        // Arrange
+        CreditCard savedCard = CreditCard.builder()
+                .id(1L)
+                .cardNumber(validCreditCardDto.getCardNumber())
+                .month(validCreditCardDto.getMonth())
+                .year(validCreditCardDto.getYear())
+                .CVV(validCreditCardDto.getCVV())
+                .accountBalance(0L)
+                .build();
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(creditCardRepository.save(any(CreditCard.class))).thenReturn(savedCard);
+        when(userRepository.save(any(User.class))).thenReturn(validUser);
+
+        // Act
+        paymentService.addCreditCard(validCreditCardDto);
+
+        // Assert - Propriedade: ambas operações devem ter ocorrido
+        verify(creditCardRepository, times(1)).save(any(CreditCard.class));
+        verify(userRepository, times(1)).save(validUser);
+        
+        // Verificar ordem: cartão salvo primeiro, depois usuário
+        var inOrder = inOrder(creditCardRepository, userRepository);
+        inOrder.verify(creditCardRepository).save(any(CreditCard.class));
+        inOrder.verify(userRepository).save(validUser);
+    }
+
+    @Test
+    @DisplayName("TC21: Propriedade - Operação de transferência é atômica")
+    void shouldPerformAtomicOperation_WhenTransferringMoney() {
+        // Arrange
+        validUser.setCreditCard(existingCreditCard);
+        Long initialBalance = existingCreditCard.getAccountBalance();
+        Long transferAmount = 300L;
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(userRepository.save(any(User.class))).thenReturn(validUser);
+
+        // Act
+        paymentService.moneyTransfer(transferAmount);
+
+        // Assert - Propriedade: saldo atualizado e salvo
+        assertEquals(initialBalance + transferAmount, validUser.getCreditCard().getAccountBalance());
+        verify(userRepository, times(1)).save(validUser);
+    }
+
+    @Test
+    @DisplayName("TC22: Adicionar cartão com mês janeiro (1)")
+    void shouldAddCreditCard_WithJanuaryMonth() {
+        // Arrange
+        CreditCardDto cardWithJanuary = CreditCardDto.builder()
+                .cardNumber(2222333344445555L)
+                .month(1) // Janeiro
+                .year(2026)
+                .CVV(222)
+                .build();
+
+        CreditCard savedCard = CreditCard.builder()
+                .id(1L)
+                .cardNumber(cardWithJanuary.getCardNumber())
+                .month(cardWithJanuary.getMonth())
+                .year(cardWithJanuary.getYear())
+                .CVV(cardWithJanuary.getCVV())
+                .accountBalance(0L)
+                .build();
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(creditCardRepository.save(any(CreditCard.class))).thenReturn(savedCard);
+        when(userRepository.save(any(User.class))).thenReturn(validUser);
+
+        // Act
+        paymentService.addCreditCard(cardWithJanuary);
+
+        // Assert
+        assertEquals(1, validUser.getCreditCard().getMonth());
+    }
+
+    @Test
+    @DisplayName("TC23: Adicionar cartão com mês dezembro (12)")
+    void shouldAddCreditCard_WithDecemberMonth() {
+        // Arrange
+        CreditCardDto cardWithDecember = CreditCardDto.builder()
+                .cardNumber(3333444455556666L)
+                .month(12) // Dezembro
+                .year(2027)
+                .CVV(333)
+                .build();
+
+        CreditCard savedCard = CreditCard.builder()
+                .id(1L)
+                .cardNumber(cardWithDecember.getCardNumber())
+                .month(cardWithDecember.getMonth())
+                .year(cardWithDecember.getYear())
+                .CVV(cardWithDecember.getCVV())
+                .accountBalance(0L)
+                .build();
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(creditCardRepository.save(any(CreditCard.class))).thenReturn(savedCard);
+        when(userRepository.save(any(User.class))).thenReturn(validUser);
+
+        // Act
+        paymentService.addCreditCard(cardWithDecember);
+
+        // Assert
+        assertEquals(12, validUser.getCreditCard().getMonth());
+    }
+
+    @Test
+    @DisplayName("TC24: Transferir para alcançar saldo de 5000")
+    void shouldTransferMoney_ToReachSpecificBalance() {
+        // Arrange
+        existingCreditCard.setAccountBalance(2000L);
+        validUser.setCreditCard(existingCreditCard);
+        Long transferAmount = 3000L; // 2000 + 3000 = 5000
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(userRepository.save(any(User.class))).thenReturn(validUser);
+
+        // Act
+        paymentService.moneyTransfer(transferAmount);
+
+        // Assert
+        assertEquals(5000L, validUser.getCreditCard().getAccountBalance());
+    }
+
+    @Test
+    @DisplayName("TC25: Propriedade - Múltiplas transferências devem ser associativas")
+    void shouldBeAssociative_ForMultipleTransfers() {
+        // Arrange - Cenário 1: (100 + 200) + 300
+        CreditCard card1 = CreditCard.builder().accountBalance(1000L).build();
+        User user1 = User.builder().creditCard(card1).build();
+        card1.setUser(user1);
+
+        // Arrange - Cenário 2: 100 + (200 + 300)
+        CreditCard card2 = CreditCard.builder().accountBalance(1000L).build();
+        User user2 = User.builder().creditCard(card2).build();
+        card2.setUser(user2);
+
+        when(userRepository.save(any(User.class))).thenReturn(user1, user2);
+
+        // Act - Cenário 1
+        when(loggedInUser.getUser()).thenReturn(user1);
+        paymentService.moneyTransfer(100L);
+        paymentService.moneyTransfer(200L);
+        paymentService.moneyTransfer(300L);
+        Long balance1 = user1.getCreditCard().getAccountBalance();
+
+        // Act - Cenário 2 (mesma sequência, testando propriedade associativa)
+        when(loggedInUser.getUser()).thenReturn(user2);
+        paymentService.moneyTransfer(100L);
+        paymentService.moneyTransfer(200L);
+        paymentService.moneyTransfer(300L);
+        Long balance2 = user2.getCreditCard().getAccountBalance();
+
+        // Assert - Propriedade: resultado deve ser o mesmo
+        assertEquals(balance1, balance2);
+        assertEquals(1600L, balance1); // 1000 + 100 + 200 + 300
+        assertEquals(1600L, balance2);
+    }
+
+    @Test
+    @DisplayName("TC26: Transferir valor ímpar (333)")
+    void shouldTransferMoney_WithOddAmount() {
+        // Arrange
+        validUser.setCreditCard(existingCreditCard);
+        Long transferAmount = 333L;
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(userRepository.save(any(User.class))).thenReturn(validUser);
+
+        // Act
+        paymentService.moneyTransfer(transferAmount);
+
+        // Assert
+        assertEquals(1333L, validUser.getCreditCard().getAccountBalance()); // 1000 + 333
+    }
+
+    @Test
+    @DisplayName("TC27: Transferir sequência de valores pequenos")
+    void shouldTransferMoney_WithSequenceOfSmallAmounts() {
+        // Arrange
+        validUser.setCreditCard(existingCreditCard);
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(userRepository.save(any(User.class))).thenReturn(validUser);
+
+        // Act - Múltiplas pequenas transferências
+        paymentService.moneyTransfer(1L);
+        paymentService.moneyTransfer(2L);
+        paymentService.moneyTransfer(3L);
+        paymentService.moneyTransfer(4L);
+        paymentService.moneyTransfer(5L);
+
+        // Assert
+        assertEquals(1015L, validUser.getCreditCard().getAccountBalance()); // 1000 + 1+2+3+4+5
+        verify(userRepository, times(5)).save(validUser);
+    }
+
+    @Test
+    @DisplayName("TC28: Propriedade - UserRepository.save deve ser chamado exatamente uma vez por operação")
+    void shouldCallUserRepositorySave_ExactlyOncePerOperation() {
+        // Arrange
+        validUser.setCreditCard(existingCreditCard);
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(userRepository.save(any(User.class))).thenReturn(validUser);
+
+        // Act
+        paymentService.moneyTransfer(500L);
+
+        // Assert
+        verify(userRepository, times(1)).save(validUser);
+    }
+
+    @Test
+    @DisplayName("TC29: Adicionar cartão com ano futuro distante (2050)")
+    void shouldAddCreditCard_WithFarFutureYear() {
+        // Arrange
+        CreditCardDto cardWithFutureYear = CreditCardDto.builder()
+                .cardNumber(6666777788889999L)
+                .month(6)
+                .year(2050) // Ano distante
+                .CVV(666)
+                .build();
+
+        CreditCard savedCard = CreditCard.builder()
+                .id(1L)
+                .cardNumber(cardWithFutureYear.getCardNumber())
+                .month(cardWithFutureYear.getMonth())
+                .year(cardWithFutureYear.getYear())
+                .CVV(cardWithFutureYear.getCVV())
+                .accountBalance(0L)
+                .build();
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(creditCardRepository.save(any(CreditCard.class))).thenReturn(savedCard);
+        when(userRepository.save(any(User.class))).thenReturn(validUser);
+
+        // Act
+        paymentService.addCreditCard(cardWithFutureYear);
+
+        // Assert
+        assertEquals(2050, validUser.getCreditCard().getYear());
+    }
+
+    @Test
+    @DisplayName("TC30: Propriedade - Múltiplos usuários podem ter cartões e fazer transferências independentes")
+    void shouldAllowMultipleUsers_ToHaveIndependentCards() {
+        // Arrange - Usuário 1
+        CreditCard card1 = CreditCard.builder().id(1L).accountBalance(500L).build();
+        User user1 = User.builder().id(1L).username("user1").creditCard(card1).build();
+        card1.setUser(user1);
+
+        // Arrange - Usuário 2
+        CreditCard card2 = CreditCard.builder().id(2L).accountBalance(1500L).build();
+        User user2 = User.builder().id(2L).username("user2").creditCard(card2).build();
+        card2.setUser(user2);
+
+        when(userRepository.save(any(User.class))).thenReturn(user1, user2);
+
+        // Act - User 1 transfere
+        when(loggedInUser.getUser()).thenReturn(user1);
+        paymentService.moneyTransfer(200L);
+
+        // Act - User 2 transfere
+        when(loggedInUser.getUser()).thenReturn(user2);
+        paymentService.moneyTransfer(300L);
+
+        // Assert - Propriedade: operações são independentes
+        assertEquals(700L, user1.getCreditCard().getAccountBalance()); // 500 + 200
+        assertEquals(1800L, user2.getCreditCard().getAccountBalance()); // 1500 + 300
+        verify(userRepository, times(2)).save(any(User.class));
+    }
+
+    @Test
+    @DisplayName("TC31: Propriedade - Dados do cartão devem ser preservados após adição")
+    void shouldPreserveCreditCardData_AfterAdding() {
+        // Arrange
+        CreditCard savedCard = CreditCard.builder()
+                .id(1L)
+                .cardNumber(validCreditCardDto.getCardNumber())
+                .month(validCreditCardDto.getMonth())
+                .year(validCreditCardDto.getYear())
+                .CVV(validCreditCardDto.getCVV())
+                .accountBalance(0L)
+                .build();
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(creditCardRepository.save(any(CreditCard.class))).thenReturn(savedCard);
+        when(userRepository.save(any(User.class))).thenReturn(validUser);
+
+        // Act
+        paymentService.addCreditCard(validCreditCardDto);
+
+        // Assert - Propriedade: todos os dados devem ser preservados
+        CreditCard card = validUser.getCreditCard();
+        assertEquals(validCreditCardDto.getCardNumber(), card.getCardNumber());
+        assertEquals(validCreditCardDto.getMonth(), card.getMonth());
+        assertEquals(validCreditCardDto.getYear(), card.getYear());
+        assertEquals(validCreditCardDto.getCVV(), card.getCVV());
+    }
+
+    @Test
+    @DisplayName("TC32: Transferir valor que resulta em saldo grande (50000)")
+    void shouldTransferMoney_ResultingInLargeBalance() {
+        // Arrange
+        existingCreditCard.setAccountBalance(20000L);
+        validUser.setCreditCard(existingCreditCard);
+        Long transferAmount = 30000L;
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(userRepository.save(any(User.class))).thenReturn(validUser);
+
+        // Act
+        paymentService.moneyTransfer(transferAmount);
+
+        // Assert
+        assertEquals(50000L, validUser.getCreditCard().getAccountBalance());
+    }
+
+    @Test
+    @DisplayName("TC33: Propriedade - Estado não deve ser modificado em caso de falha")
+    void shouldNotModifyState_WhenAddCardFails() {
+        // Arrange
+        CreditCard existingCard = CreditCard.builder()
+                .id(1L)
+                .cardNumber(9999888877776666L)
+                .accountBalance(1000L)
+                .build();
+        validUser.setCreditCard(existingCard);
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+
+        // Act & Assert
+        assertThrows(IllegalCallerException.class,
+                () -> paymentService.addCreditCard(validCreditCardDto));
+
+        // Propriedade: estado não deve ter mudado
+        assertSame(existingCard, validUser.getCreditCard());
+        assertEquals(9999888877776666L, validUser.getCreditCard().getCardNumber());
+        verify(creditCardRepository, never()).save(any(CreditCard.class));
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    @DisplayName("TC34: Propriedade - Transferências devem ser idempotentes no sentido de não ter efeitos colaterais")
+    void shouldNotHaveSideEffects_WhenTransferringMoney() {
+        // Arrange
+        validUser.setCreditCard(existingCreditCard);
+        Long transferAmount = 250L;
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(userRepository.save(any(User.class))).thenReturn(validUser);
+
+        // Act
+        paymentService.moneyTransfer(transferAmount);
+
+        // Assert - Propriedade: apenas o saldo deve ter mudado
+        assertEquals(1250L, validUser.getCreditCard().getAccountBalance());
+        // Outros campos do cartão não devem ter mudado
+        assertEquals(1234567890123456L, validUser.getCreditCard().getCardNumber());
+        assertEquals(12, validUser.getCreditCard().getMonth());
+        assertEquals(2025, validUser.getCreditCard().getYear());
+        assertEquals(123, validUser.getCreditCard().getCVV());
+    }
 }

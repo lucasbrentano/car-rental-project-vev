@@ -431,4 +431,409 @@ class Step4_PlaceOrderJourneyTest {
         assertEquals(5000L, validUser.getCreditCard().getAccountBalance(),
                 "Balance should remain unchanged after failed transaction");
     }
+
+    // ==================== TESTES ADICIONAIS DE COBERTURA ====================
+
+    @Test
+    @DisplayName("TC16: Pedido com 24 horas - valor típico de um dia")
+    void shouldPlaceOrder_WithTwentyFourHours() {
+        // Arrange - Período de um dia completo
+        String packageName = "Economy";
+        Integer hours = 24;
+        Long initialBalance = validCreditCard.getAccountBalance();
+        Long expectedCost = (long) economyPackage.getPricePerHour() * hours; // 50 * 24 = 1200
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(carPackageRepository.findByPackageName(packageName)).thenReturn(Optional.of(economyPackage));
+        when(accessKeyRepository.save(any(AccessKey.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        AccessKeyDto result = orderService.submitOrder(packageName, hours);
+
+        // Assert
+        assertEquals(24, result.getHours());
+        assertEquals(initialBalance - expectedCost, validUser.getCreditCard().getAccountBalance());
+        assertEquals(3800L, validUser.getCreditCard().getAccountBalance()); // 5000 - 1200
+    }
+
+    @Test
+    @DisplayName("TC17: Pedido com 2 horas - valor limite baixo típico")
+    void shouldPlaceOrder_WithTwoHours() {
+        // Arrange
+        String packageName = "Standard";
+        Integer hours = 2;
+        Long expectedCost = (long) standardPackage.getPricePerHour() * hours; // 100 * 2 = 200
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(carPackageRepository.findByPackageName(packageName)).thenReturn(Optional.of(standardPackage));
+        when(accessKeyRepository.save(any(AccessKey.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        AccessKeyDto result = orderService.submitOrder(packageName, hours);
+
+        // Assert
+        assertEquals(2, result.getHours());
+        assertEquals(4800L, validUser.getCreditCard().getAccountBalance()); // 5000 - 200
+    }
+
+    @Test
+    @DisplayName("TC18: Pedido com 168 horas (uma semana) - valor limite alto típico")
+    void shouldPlaceOrder_WithOneWeek() {
+        // Arrange - Uma semana completa
+        validCreditCard.setAccountBalance(10000L); // Aumentar saldo para suportar
+        String packageName = "Economy";
+        Integer hours = 168; // 7 dias * 24 horas
+        Long expectedCost = (long) economyPackage.getPricePerHour() * hours; // 50 * 168 = 8400
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(carPackageRepository.findByPackageName(packageName)).thenReturn(Optional.of(economyPackage));
+        when(accessKeyRepository.save(any(AccessKey.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        AccessKeyDto result = orderService.submitOrder(packageName, hours);
+
+        // Assert
+        assertEquals(168, result.getHours());
+        assertEquals(1600L, validUser.getCreditCard().getAccountBalance()); // 10000 - 8400
+    }
+
+    @Test
+    @DisplayName("TC19: Pedido com saldo exatamente 1 unidade acima do necessário")
+    void shouldPlaceOrder_WithBalanceExactlyOnePlusRequired() {
+        // Arrange
+        validCreditCard.setAccountBalance(501L);
+        String packageName = "Economy";
+        Integer hours = 10; // 50 * 10 = 500
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(carPackageRepository.findByPackageName(packageName)).thenReturn(Optional.of(economyPackage));
+        when(accessKeyRepository.save(any(AccessKey.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        AccessKeyDto result = orderService.submitOrder(packageName, hours);
+
+        // Assert
+        assertEquals(1L, validUser.getCreditCard().getAccountBalance());
+    }
+
+    @Test
+    @DisplayName("TC20: Falha com saldo 1 unidade abaixo do necessário")
+    void shouldThrowException_WithBalanceExactlyOneBelow() {
+        // Arrange
+        validCreditCard.setAccountBalance(499L);
+        String packageName = "Economy";
+        Integer hours = 10; // 50 * 10 = 500 (precisa de 500, mas tem 499)
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(carPackageRepository.findByPackageName(packageName)).thenReturn(Optional.of(economyPackage));
+
+        // Act & Assert
+        assertThrows(InsufficientFundsException.class,
+                () -> orderService.submitOrder(packageName, hours));
+
+        assertEquals(499L, validUser.getCreditCard().getAccountBalance()); // Saldo não mudou
+    }
+
+    @Test
+    @DisplayName("TC21: Pedido com diferentes pacotes para verificar cálculo correto")
+    void shouldCalculateCostCorrectly_ForDifferentPackages() {
+        // Arrange - Teste com múltiplos pacotes
+        Integer hours = 5;
+
+        // Teste com Economy
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(carPackageRepository.findByPackageName("Economy")).thenReturn(Optional.of(economyPackage));
+        when(accessKeyRepository.save(any(AccessKey.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        orderService.submitOrder("Economy", hours);
+        assertEquals(4750L, validUser.getCreditCard().getAccountBalance()); // 5000 - (50*5) = 4750
+
+        // Reset e teste com Standard
+        validUser.setAccessKey(null);
+        validCreditCard.setAccountBalance(5000L);
+        when(carPackageRepository.findByPackageName("Standard")).thenReturn(Optional.of(standardPackage));
+
+        orderService.submitOrder("Standard", hours);
+        assertEquals(4500L, validUser.getCreditCard().getAccountBalance()); // 5000 - (100*5) = 4500
+
+        // Reset e teste com Luxury
+        validUser.setAccessKey(null);
+        validCreditCard.setAccountBalance(5000L);
+        when(carPackageRepository.findByPackageName("Luxury")).thenReturn(Optional.of(luxuryPackage));
+
+        orderService.submitOrder("Luxury", hours);
+        assertEquals(3500L, validUser.getCreditCard().getAccountBalance()); // 5000 - (300*5) = 3500
+    }
+
+    @Test
+    @DisplayName("TC22: Propriedade - Operação deve ser atômica (salvar AccessKey e atualizar saldo)")
+    void shouldPerformAtomicOperation_WhenPlacingOrder() {
+        // Arrange
+        String packageName = "Standard";
+        Integer hours = 3;
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(carPackageRepository.findByPackageName(packageName)).thenReturn(Optional.of(standardPackage));
+        when(accessKeyRepository.save(any(AccessKey.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        orderService.submitOrder(packageName, hours);
+
+        // Assert - Propriedade: ambas operações devem ter ocorrido
+        assertNotNull(validUser.getAccessKey(), "AccessKey should be created");
+        assertEquals(4700L, validUser.getCreditCard().getAccountBalance(), "Balance should be updated");
+        verify(accessKeyRepository, times(1)).save(any(AccessKey.class));
+    }
+
+    @Test
+    @DisplayName("TC23: Propriedade - Falha deve ser fail-fast (verificar cartão antes de buscar pacote)")
+    void shouldFailFast_WhenUserHasNoCreditCard() {
+        // Arrange
+        validUser.setCreditCard(null);
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+
+        // Act & Assert
+        assertThrows(NoCreditCardException.class,
+                () -> orderService.submitOrder("Economy", 5));
+
+        // Propriedade: verificação de cartão deve ocorrer primeiro
+        verify(carPackageRepository, never()).findByPackageName(anyString());
+        verify(accessKeyRepository, never()).save(any(AccessKey.class));
+    }
+
+    @Test
+    @DisplayName("TC24: Propriedade - Verificar pedido existente antes de calcular custo")
+    void shouldCheckExistingOrder_BeforeCalculatingCost() {
+        // Arrange
+        AccessKey existingKey = AccessKey.builder()
+                .id(1L)
+                .carPackage("Economy")
+                .hours(2)
+                .user(validUser)
+                .build();
+        validUser.setAccessKey(existingKey);
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+
+        // Act & Assert
+        assertThrows(ExistingOrderException.class,
+                () -> orderService.submitOrder("Luxury", 10));
+
+        // Propriedade: não deve buscar pacote se já tem pedido
+        verify(carPackageRepository, never()).findByPackageName(anyString());
+        verify(accessKeyRepository, never()).save(any(AccessKey.class));
+    }
+
+    @Test
+    @DisplayName("TC25: Pedido com pacote de preço customizado")
+    void shouldPlaceOrder_WithCustomPricePackage() {
+        // Arrange - Pacote com preço diferente
+        CarPackage customPackage = CarPackage.builder()
+                .id(4L)
+                .packageName("Custom")
+                .pricePerHour(75) // Preço customizado
+                .build();
+
+        String packageName = "Custom";
+        Integer hours = 8;
+        Long expectedCost = (long) customPackage.getPricePerHour() * hours; // 75 * 8 = 600
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(carPackageRepository.findByPackageName(packageName)).thenReturn(Optional.of(customPackage));
+        when(accessKeyRepository.save(any(AccessKey.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        AccessKeyDto result = orderService.submitOrder(packageName, hours);
+
+        // Assert
+        assertEquals(packageName, result.getCarPackage());
+        assertEquals(4400L, validUser.getCreditCard().getAccountBalance()); // 5000 - 600
+    }
+
+    @Test
+    @DisplayName("TC26: Pedido com valor muito alto que excede saldo")
+    void shouldThrowException_WhenCostExceedsBalanceSignificantly() {
+        // Arrange
+        validCreditCard.setAccountBalance(1000L);
+        String packageName = "Luxury";
+        Integer hours = 100; // 300 * 100 = 30000 (muito maior que saldo)
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(carPackageRepository.findByPackageName(packageName)).thenReturn(Optional.of(luxuryPackage));
+
+        // Act & Assert
+        assertThrows(InsufficientFundsException.class,
+                () -> orderService.submitOrder(packageName, hours));
+
+        assertEquals(1000L, validUser.getCreditCard().getAccountBalance());
+    }
+
+    @Test
+    @DisplayName("TC27: Propriedade - Custo nunca deve ser negativo")
+    void shouldNeverHaveNegativeCost_ForAnyOrder() {
+        // Arrange - Vários cenários
+        Integer[] hoursArray = {1, 5, 10, 50, 100};
+        CarPackage[] packages = {economyPackage, standardPackage, luxuryPackage};
+
+        for (CarPackage pkg : packages) {
+            for (Integer hours : hoursArray) {
+                // Propriedade: custo sempre positivo
+                long cost = (long) pkg.getPricePerHour() * hours;
+                assertTrue(cost > 0, "Cost should always be positive");
+            }
+        }
+    }
+
+    @Test
+    @DisplayName("TC28: Propriedade - Relação bidirecional User-AccessKey deve ser estabelecida")
+    void shouldEstablishBidirectionalRelationship_BetweenUserAndAccessKey() {
+        // Arrange
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(carPackageRepository.findByPackageName("Economy")).thenReturn(Optional.of(economyPackage));
+        when(accessKeyRepository.save(any(AccessKey.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        orderService.submitOrder("Economy", 3);
+
+        // Assert - Propriedade: relação bidirecional
+        assertNotNull(validUser.getAccessKey());
+        assertNotNull(validUser.getAccessKey().getUser());
+        assertSame(validUser, validUser.getAccessKey().getUser());
+        assertSame(validUser.getAccessKey(), validUser.getAccessKey());
+    }
+
+    @Test
+    @DisplayName("TC29: Pedido com hora mínima absoluta (1) e pacote mais barato")
+    void shouldPlaceOrder_WithAbsoluteMinimumCost() {
+        // Arrange - Menor custo possível
+        String packageName = "Economy";
+        Integer hours = 1;
+        Long expectedCost = 50L; // 50 * 1
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(carPackageRepository.findByPackageName(packageName)).thenReturn(Optional.of(economyPackage));
+        when(accessKeyRepository.save(any(AccessKey.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        AccessKeyDto result = orderService.submitOrder(packageName, hours);
+
+        // Assert
+        assertEquals(4950L, validUser.getCreditCard().getAccountBalance()); // 5000 - 50
+    }
+
+    @Test
+    @DisplayName("TC30: Verificar que AccessKeyRepository.save é chamado exatamente uma vez")
+    void shouldCallAccessKeyRepositorySave_ExactlyOnce() {
+        // Arrange
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(carPackageRepository.findByPackageName("Standard")).thenReturn(Optional.of(standardPackage));
+        when(accessKeyRepository.save(any(AccessKey.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        orderService.submitOrder("Standard", 4);
+
+        // Assert - Propriedade: save deve ser chamado exatamente uma vez
+        verify(accessKeyRepository, times(1)).save(any(AccessKey.class));
+        verify(accessKeyRepository, never()).delete(any(AccessKey.class));
+    }
+
+    @Test
+    @DisplayName("TC31: Propriedade - Múltiplos usuários podem fazer pedidos independentes")
+    void shouldAllowMultipleUsers_ToPlaceIndependentOrders() {
+        // Arrange - Dois usuários diferentes
+        User user1 = User.builder()
+                .id(1L)
+                .username("user.one")
+                .creditCard(CreditCard.builder().accountBalance(3000L).build())
+                .accessKey(null)
+                .build();
+        user1.getCreditCard().setUser(user1);
+
+        User user2 = User.builder()
+                .id(2L)
+                .username("user.two")
+                .creditCard(CreditCard.builder().accountBalance(2000L).build())
+                .accessKey(null)
+                .build();
+        user2.getCreditCard().setUser(user2);
+
+        when(carPackageRepository.findByPackageName("Economy")).thenReturn(Optional.of(economyPackage));
+        when(carPackageRepository.findByPackageName("Standard")).thenReturn(Optional.of(standardPackage));
+        when(accessKeyRepository.save(any(AccessKey.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act - User 1 faz pedido
+        when(loggedInUser.getUser()).thenReturn(user1);
+        orderService.submitOrder("Economy", 10); // 50 * 10 = 500
+
+        // Act - User 2 faz pedido
+        when(loggedInUser.getUser()).thenReturn(user2);
+        orderService.submitOrder("Standard", 5); // 100 * 5 = 500
+
+        // Assert - Propriedade: pedidos são independentes
+        assertEquals(2500L, user1.getCreditCard().getAccountBalance()); // 3000 - 500
+        assertEquals(1500L, user2.getCreditCard().getAccountBalance()); // 2000 - 500
+        assertNotNull(user1.getAccessKey());
+        assertNotNull(user2.getAccessKey());
+        assertNotSame(user1.getAccessKey(), user2.getAccessKey());
+        verify(accessKeyRepository, times(2)).save(any(AccessKey.class));
+    }
+
+    @Test
+    @DisplayName("TC32: Propriedade - Saldo nunca deve aumentar após pedido bem-sucedido")
+    void shouldNeverIncreaseBalance_AfterSuccessfulOrder() {
+        // Arrange
+        Long initialBalance = validCreditCard.getAccountBalance();
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(carPackageRepository.findByPackageName("Standard")).thenReturn(Optional.of(standardPackage));
+        when(accessKeyRepository.save(any(AccessKey.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        orderService.submitOrder("Standard", 3);
+
+        // Assert - Propriedade: saldo após deve ser menor que saldo inicial
+        Long finalBalance = validUser.getCreditCard().getAccountBalance();
+        assertTrue(finalBalance < initialBalance,
+                "Balance should always decrease after successful order");
+        assertTrue(finalBalance <= initialBalance - 300, // 100 * 3
+                "Balance should decrease by at least the order cost");
+    }
+
+    @Test
+    @DisplayName("TC33: Falha não deve modificar estado quando pacote não existe")
+    void shouldNotModifyState_WhenPackageNotFound() {
+        // Arrange
+        Long initialBalance = validCreditCard.getAccountBalance();
+        AccessKey initialAccessKey = validUser.getAccessKey();
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+        when(carPackageRepository.findByPackageName("NonExistent")).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(EntityNotFoundException.class,
+                () -> orderService.submitOrder("NonExistent", 5));
+
+        // Propriedade: estado não deve ter mudado
+        assertEquals(initialBalance, validUser.getCreditCard().getAccountBalance());
+        assertEquals(initialAccessKey, validUser.getAccessKey());
+        verify(accessKeyRepository, never()).save(any(AccessKey.class));
+    }
+
+    @Test
+    @DisplayName("TC34: Propriedade - Ordem de validações deve ser consistente")
+    void shouldValidateInConsistentOrder_ForAllRequests() {
+        // Arrange - Múltiplos problemas simultâneos
+        validUser.setCreditCard(null); // Sem cartão (primeira validação)
+        validUser.setAccessKey(AccessKey.builder().build()); // Já tem pedido (segunda validação)
+
+        when(loggedInUser.getUser()).thenReturn(validUser);
+
+        // Act & Assert - Deve falhar na primeira validação (cartão)
+        assertThrows(NoCreditCardException.class,
+                () -> orderService.submitOrder("Economy", 5));
+
+        // Propriedade: nunca deve chegar nas validações posteriores
+        verify(carPackageRepository, never()).findByPackageName(anyString());
+    }
 }

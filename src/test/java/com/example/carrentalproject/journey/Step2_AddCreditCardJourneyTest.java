@@ -509,4 +509,563 @@ class Step2_AddCreditCardJourneyTest {
         inOrder.verify(creditCardRepository).save(any(CreditCard.class));
         inOrder.verify(userRepository).save(validUser);
     }
+
+    // ==================== TESTES ADICIONAIS DE COBERTURA ====================
+
+    @Test
+    @DisplayName("TC16: Adicionar cartão com mês junho (6) - valor intermediário")
+    void shouldAddCreditCard_WithMiddleMonthValue() {
+        // Arrange - Mês intermediário (junho)
+        CreditCardDto cardWithMiddleMonth = CreditCardDto.builder()
+                .cardNumber(2468135724681357L)
+                .month(6) // Junho - valor intermediário
+                .year(2026)
+                .CVV(555)
+                .build();
+
+        CreditCard savedCard = CreditCard.builder()
+                .cardNumber(cardWithMiddleMonth.getCardNumber())
+                .month(cardWithMiddleMonth.getMonth())
+                .year(cardWithMiddleMonth.getYear())
+                .CVV(cardWithMiddleMonth.getCVV())
+                .accountBalance(0L)
+                .build();
+
+        when(userRepository.findByUsername(validUser.getUsername())).thenReturn(Optional.of(validUser));
+        when(creditCardRepository.save(any(CreditCard.class))).thenReturn(savedCard);
+        when(userRepository.save(any(User.class))).thenReturn(validUser);
+
+        // Act
+        User result = userService.addCreditCardToUser(validUser.getUsername(), cardWithMiddleMonth);
+
+        // Assert
+        assertEquals(6, result.getCreditCard().getMonth());
+        verify(creditCardRepository, times(1)).save(any(CreditCard.class));
+    }
+
+    @Test
+    @DisplayName("TC17: Adicionar cartão com CVV intermediário (500)")
+    void shouldAddCreditCard_WithMiddleCVVValue() {
+        // Arrange - CVV intermediário
+        CreditCardDto cardWithMiddleCVV = CreditCardDto.builder()
+                .cardNumber(3692581470369258L)
+                .month(4)
+                .year(2027)
+                .CVV(500) // CVV intermediário
+                .build();
+
+        CreditCard savedCard = CreditCard.builder()
+                .cardNumber(cardWithMiddleCVV.getCardNumber())
+                .month(cardWithMiddleCVV.getMonth())
+                .year(cardWithMiddleCVV.getYear())
+                .CVV(cardWithMiddleCVV.getCVV())
+                .accountBalance(0L)
+                .build();
+
+        when(userRepository.findByUsername(validUser.getUsername())).thenReturn(Optional.of(validUser));
+        when(creditCardRepository.save(any(CreditCard.class))).thenReturn(savedCard);
+        when(userRepository.save(any(User.class))).thenReturn(validUser);
+
+        // Act
+        User result = userService.addCreditCardToUser(validUser.getUsername(), cardWithMiddleCVV);
+
+        // Assert
+        assertEquals(500, result.getCreditCard().getCVV());
+    }
+
+    @Test
+    @DisplayName("TC18: Adicionar cartão com ano distante no futuro (2050)")
+    void shouldAddCreditCard_WithFarFutureYear() {
+        // Arrange - Ano muito distante no futuro
+        CreditCardDto cardWithFarFutureYear = CreditCardDto.builder()
+                .cardNumber(1472583690147258L)
+                .month(2)
+                .year(2050) // Ano muito distante
+                .CVV(888)
+                .build();
+
+        CreditCard savedCard = CreditCard.builder()
+                .cardNumber(cardWithFarFutureYear.getCardNumber())
+                .month(cardWithFarFutureYear.getMonth())
+                .year(cardWithFarFutureYear.getYear())
+                .CVV(cardWithFarFutureYear.getCVV())
+                .accountBalance(0L)
+                .build();
+
+        when(userRepository.findByUsername(validUser.getUsername())).thenReturn(Optional.of(validUser));
+        when(creditCardRepository.save(any(CreditCard.class))).thenReturn(savedCard);
+        when(userRepository.save(any(User.class))).thenReturn(validUser);
+
+        // Act
+        User result = userService.addCreditCardToUser(validUser.getUsername(), cardWithFarFutureYear);
+
+        // Assert
+        assertEquals(2050, result.getCreditCard().getYear());
+    }
+
+    @Test
+    @DisplayName("TC19: Adicionar cartão com números sequenciais")
+    void shouldAddCreditCard_WithSequentialNumbers() {
+        // Arrange - Número de cartão com padrão sequencial
+        CreditCardDto cardWithSequentialNumber = CreditCardDto.builder()
+                .cardNumber(1234567890123456L) // Números sequenciais
+                .month(10)
+                .year(2028)
+                .CVV(100)
+                .build();
+
+        CreditCard savedCard = CreditCard.builder()
+                .cardNumber(cardWithSequentialNumber.getCardNumber())
+                .month(cardWithSequentialNumber.getMonth())
+                .year(cardWithSequentialNumber.getYear())
+                .CVV(cardWithSequentialNumber.getCVV())
+                .accountBalance(0L)
+                .build();
+
+        when(userRepository.findByUsername(validUser.getUsername())).thenReturn(Optional.of(validUser));
+        when(creditCardRepository.save(any(CreditCard.class))).thenReturn(savedCard);
+        when(userRepository.save(any(User.class))).thenReturn(validUser);
+
+        // Act
+        User result = userService.addCreditCardToUser(validUser.getUsername(), cardWithSequentialNumber);
+
+        // Assert
+        assertEquals(1234567890123456L, result.getCreditCard().getCardNumber());
+    }
+
+    @Test
+    @DisplayName("TC20: Adicionar cartão com números repetidos")
+    void shouldAddCreditCard_WithRepeatedNumbers() {
+        // Arrange - Número de cartão com dígitos repetidos
+        CreditCardDto cardWithRepeatedNumbers = CreditCardDto.builder()
+                .cardNumber(1111111111111111L) // Todos os dígitos iguais
+                .month(1)
+                .year(2025)
+                .CVV(111)
+                .build();
+
+        CreditCard savedCard = CreditCard.builder()
+                .cardNumber(cardWithRepeatedNumbers.getCardNumber())
+                .month(cardWithRepeatedNumbers.getMonth())
+                .year(cardWithRepeatedNumbers.getYear())
+                .CVV(cardWithRepeatedNumbers.getCVV())
+                .accountBalance(0L)
+                .build();
+
+        when(userRepository.findByUsername(validUser.getUsername())).thenReturn(Optional.of(validUser));
+        when(creditCardRepository.save(any(CreditCard.class))).thenReturn(savedCard);
+        when(userRepository.save(any(User.class))).thenReturn(validUser);
+
+        // Act
+        User result = userService.addCreditCardToUser(validUser.getUsername(), cardWithRepeatedNumbers);
+
+        // Assert
+        assertEquals(1111111111111111L, result.getCreditCard().getCardNumber());
+    }
+
+    @Test
+    @DisplayName("TC21: Adicionar cartão com CVV de dois dígitos (99)")
+    void shouldAddCreditCard_WithTwoDigitCVV() {
+        // Arrange - CVV com 2 dígitos
+        CreditCardDto cardWithTwoDigitCVV = CreditCardDto.builder()
+                .cardNumber(8529637410852963L)
+                .month(7)
+                .year(2029)
+                .CVV(99) // CVV de 2 dígitos
+                .build();
+
+        CreditCard savedCard = CreditCard.builder()
+                .cardNumber(cardWithTwoDigitCVV.getCardNumber())
+                .month(cardWithTwoDigitCVV.getMonth())
+                .year(cardWithTwoDigitCVV.getYear())
+                .CVV(cardWithTwoDigitCVV.getCVV())
+                .accountBalance(0L)
+                .build();
+
+        when(userRepository.findByUsername(validUser.getUsername())).thenReturn(Optional.of(validUser));
+        when(creditCardRepository.save(any(CreditCard.class))).thenReturn(savedCard);
+        when(userRepository.save(any(User.class))).thenReturn(validUser);
+
+        // Act
+        User result = userService.addCreditCardToUser(validUser.getUsername(), cardWithTwoDigitCVV);
+
+        // Assert
+        assertEquals(99, result.getCreditCard().getCVV());
+    }
+
+    @Test
+    @DisplayName("TC22: Adicionar cartão com CVV de um dígito (5)")
+    void shouldAddCreditCard_WithSingleDigitCVV() {
+        // Arrange - CVV com 1 dígito
+        CreditCardDto cardWithSingleDigitCVV = CreditCardDto.builder()
+                .cardNumber(7410852963741085L)
+                .month(3)
+                .year(2026)
+                .CVV(5) // CVV de 1 dígito
+                .build();
+
+        CreditCard savedCard = CreditCard.builder()
+                .cardNumber(cardWithSingleDigitCVV.getCardNumber())
+                .month(cardWithSingleDigitCVV.getMonth())
+                .year(cardWithSingleDigitCVV.getYear())
+                .CVV(cardWithSingleDigitCVV.getCVV())
+                .accountBalance(0L)
+                .build();
+
+        when(userRepository.findByUsername(validUser.getUsername())).thenReturn(Optional.of(validUser));
+        when(creditCardRepository.save(any(CreditCard.class))).thenReturn(savedCard);
+        when(userRepository.save(any(User.class))).thenReturn(validUser);
+
+        // Act
+        User result = userService.addCreditCardToUser(validUser.getUsername(), cardWithSingleDigitCVV);
+
+        // Assert
+        assertEquals(5, result.getCreditCard().getCVV());
+    }
+
+    @Test
+    @DisplayName("TC23: Adicionar cartão com ano próximo (2026)")
+    void shouldAddCreditCard_WithNearFutureYear() {
+        // Arrange - Ano próximo (2026)
+        CreditCardDto cardWithNearFutureYear = CreditCardDto.builder()
+                .cardNumber(9638527410963852L)
+                .month(11)
+                .year(2026) // Ano próximo
+                .CVV(369)
+                .build();
+
+        CreditCard savedCard = CreditCard.builder()
+                .cardNumber(cardWithNearFutureYear.getCardNumber())
+                .month(cardWithNearFutureYear.getMonth())
+                .year(cardWithNearFutureYear.getYear())
+                .CVV(cardWithNearFutureYear.getCVV())
+                .accountBalance(0L)
+                .build();
+
+        when(userRepository.findByUsername(validUser.getUsername())).thenReturn(Optional.of(validUser));
+        when(creditCardRepository.save(any(CreditCard.class))).thenReturn(savedCard);
+        when(userRepository.save(any(User.class))).thenReturn(validUser);
+
+        // Act
+        User result = userService.addCreditCardToUser(validUser.getUsername(), cardWithNearFutureYear);
+
+        // Assert
+        assertEquals(2026, result.getCreditCard().getYear());
+    }
+
+    @Test
+    @DisplayName("TC24: Propriedade - Relação bidirecional deve ser estabelecida (User -> Card -> User)")
+    void shouldEstablishBidirectionalRelationship_BetweenUserAndCard() {
+        // Arrange
+        CreditCard savedCard = CreditCard.builder()
+                .id(5L)
+                .cardNumber(validCreditCardDto.getCardNumber())
+                .month(validCreditCardDto.getMonth())
+                .year(validCreditCardDto.getYear())
+                .CVV(validCreditCardDto.getCVV())
+                .accountBalance(0L)
+                .build();
+
+        when(userRepository.findByUsername(validUser.getUsername())).thenReturn(Optional.of(validUser));
+        when(creditCardRepository.save(any(CreditCard.class))).thenReturn(savedCard);
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            CreditCard card = user.getCreditCard();
+            
+            // Propriedade: relação bidirecional deve estar estabelecida
+            assertNotNull(card);
+            assertNotNull(card.getUser());
+            assertSame(user, card.getUser());
+            assertSame(card, user.getCreditCard());
+            
+            return user;
+        });
+
+        // Act
+        User result = userService.addCreditCardToUser(validUser.getUsername(), validCreditCardDto);
+
+        // Assert
+        verify(userRepository, times(1)).save(validUser);
+    }
+
+    @Test
+    @DisplayName("TC25: Propriedade - Múltiplos usuários podem ter cartões independentes")
+    void shouldAllowMultipleUsers_ToHaveIndependentCreditCards() {
+        // Arrange - Dois usuários diferentes
+        User user1 = User.builder()
+                .id(1L)
+                .username("user.one")
+                .firstName("User")
+                .lastName("One")
+                .creditCard(null)
+                .build();
+
+        User user2 = User.builder()
+                .id(2L)
+                .username("user.two")
+                .firstName("User")
+                .lastName("Two")
+                .creditCard(null)
+                .build();
+
+        CreditCardDto card1Dto = CreditCardDto.builder()
+                .cardNumber(1111222233334444L)
+                .month(6)
+                .year(2026)
+                .CVV(111)
+                .build();
+
+        CreditCardDto card2Dto = CreditCardDto.builder()
+                .cardNumber(5555666677778888L)
+                .month(8)
+                .year(2028)
+                .CVV(555)
+                .build();
+
+        CreditCard savedCard1 = CreditCard.builder()
+                .id(1L)
+                .cardNumber(card1Dto.getCardNumber())
+                .month(card1Dto.getMonth())
+                .year(card1Dto.getYear())
+                .CVV(card1Dto.getCVV())
+                .accountBalance(0L)
+                .build();
+
+        CreditCard savedCard2 = CreditCard.builder()
+                .id(2L)
+                .cardNumber(card2Dto.getCardNumber())
+                .month(card2Dto.getMonth())
+                .year(card2Dto.getYear())
+                .CVV(card2Dto.getCVV())
+                .accountBalance(0L)
+                .build();
+
+        when(userRepository.findByUsername("user.one")).thenReturn(Optional.of(user1));
+        when(userRepository.findByUsername("user.two")).thenReturn(Optional.of(user2));
+        when(creditCardRepository.save(any(CreditCard.class))).thenReturn(savedCard1, savedCard2);
+        when(userRepository.save(any(User.class))).thenReturn(user1, user2);
+
+        // Act
+        User result1 = userService.addCreditCardToUser("user.one", card1Dto);
+        User result2 = userService.addCreditCardToUser("user.two", card2Dto);
+
+        // Assert - Propriedade: cada usuário deve ter seu próprio cartão
+        assertNotNull(result1.getCreditCard());
+        assertNotNull(result2.getCreditCard());
+        assertNotEquals(result1.getCreditCard().getCardNumber(), result2.getCreditCard().getCardNumber());
+        
+        verify(creditCardRepository, times(2)).save(any(CreditCard.class));
+        verify(userRepository, times(2)).save(any(User.class));
+    }
+
+    @Test
+    @DisplayName("TC26: Verificação de usuário deve ocorrer antes de salvar cartão")
+    void shouldVerifyUserExists_BeforeSavingCreditCard() {
+        // Arrange - Usuário não existe
+        when(userRepository.findByUsername("nonexistent.user")).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(UsernameNotFoundException.class,
+                () -> userService.addCreditCardToUser("nonexistent.user", validCreditCardDto));
+
+        // Propriedade: nenhum cartão deve ser salvo se usuário não existe
+        verify(creditCardRepository, never()).save(any(CreditCard.class));
+        verify(userRepository, never()).save(any(User.class));
+        
+        // Propriedade: verificação de usuário deve ser a primeira operação
+        verify(userRepository, times(1)).findByUsername("nonexistent.user");
+    }
+
+    @Test
+    @DisplayName("TC27: Verificação de cartão existente deve ocorrer antes de criar novo")
+    void shouldVerifyExistingCard_BeforeCreatingNew() {
+        // Arrange - Usuário já tem cartão
+        CreditCard existingCard = CreditCard.builder()
+                .id(10L)
+                .cardNumber(9999888877776666L)
+                .month(5)
+                .year(2027)
+                .CVV(999)
+                .accountBalance(5000L)
+                .build();
+
+        validUser.setCreditCard(existingCard);
+
+        when(userRepository.findByUsername(validUser.getUsername())).thenReturn(Optional.of(validUser));
+
+        // Act & Assert
+        assertThrows(IllegalCallerException.class,
+                () -> userService.addCreditCardToUser(validUser.getUsername(), validCreditCardDto));
+
+        // Propriedade: não deve tentar salvar novo cartão se já existe um
+        verify(creditCardRepository, never()).save(any(CreditCard.class));
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    @DisplayName("TC28: Adicionar cartão com todos os valores máximos simultâneos")
+    void shouldAddCreditCard_WithAllMaximumValues() {
+        // Arrange - Todos os valores no máximo
+        CreditCardDto cardWithAllMaxValues = CreditCardDto.builder()
+                .cardNumber(9999999999999999L) // Máximo de 16 dígitos
+                .month(12) // Dezembro - máximo
+                .year(2099) // Ano muito futuro
+                .CVV(999) // CVV máximo
+                .build();
+
+        CreditCard savedCard = CreditCard.builder()
+                .cardNumber(cardWithAllMaxValues.getCardNumber())
+                .month(cardWithAllMaxValues.getMonth())
+                .year(cardWithAllMaxValues.getYear())
+                .CVV(cardWithAllMaxValues.getCVV())
+                .accountBalance(0L)
+                .build();
+
+        when(userRepository.findByUsername(validUser.getUsername())).thenReturn(Optional.of(validUser));
+        when(creditCardRepository.save(any(CreditCard.class))).thenReturn(savedCard);
+        when(userRepository.save(any(User.class))).thenReturn(validUser);
+
+        // Act
+        User result = userService.addCreditCardToUser(validUser.getUsername(), cardWithAllMaxValues);
+
+        // Assert
+        assertEquals(9999999999999999L, result.getCreditCard().getCardNumber());
+        assertEquals(12, result.getCreditCard().getMonth());
+        assertEquals(2099, result.getCreditCard().getYear());
+        assertEquals(999, result.getCreditCard().getCVV());
+    }
+
+    @Test
+    @DisplayName("TC29: Adicionar cartão com todos os valores mínimos simultâneos")
+    void shouldAddCreditCard_WithAllMinimumValues() {
+        // Arrange - Todos os valores no mínimo
+        CreditCardDto cardWithAllMinValues = CreditCardDto.builder()
+                .cardNumber(1000000000000000L) // Mínimo de 16 dígitos
+                .month(1) // Janeiro - mínimo
+                .year(2025) // Ano atual
+                .CVV(1) // CVV mínimo
+                .build();
+
+        CreditCard savedCard = CreditCard.builder()
+                .cardNumber(cardWithAllMinValues.getCardNumber())
+                .month(cardWithAllMinValues.getMonth())
+                .year(cardWithAllMinValues.getYear())
+                .CVV(cardWithAllMinValues.getCVV())
+                .accountBalance(0L)
+                .build();
+
+        when(userRepository.findByUsername(validUser.getUsername())).thenReturn(Optional.of(validUser));
+        when(creditCardRepository.save(any(CreditCard.class))).thenReturn(savedCard);
+        when(userRepository.save(any(User.class))).thenReturn(validUser);
+
+        // Act
+        User result = userService.addCreditCardToUser(validUser.getUsername(), cardWithAllMinValues);
+
+        // Assert
+        assertEquals(1000000000000000L, result.getCreditCard().getCardNumber());
+        assertEquals(1, result.getCreditCard().getMonth());
+        assertEquals(2025, result.getCreditCard().getYear());
+        assertEquals(1, result.getCreditCard().getCVV());
+    }
+
+    @Test
+    @DisplayName("TC30: Propriedade - Saldo inicial sempre zero independente dos dados do cartão")
+    void shouldAlwaysHaveZeroBalance_RegardlessOfCardData() {
+        // Arrange - Vários cartões diferentes
+        CreditCardDto[] cards = {
+                CreditCardDto.builder().cardNumber(1111111111111111L).month(1).year(2025).CVV(111).build(),
+                CreditCardDto.builder().cardNumber(9999999999999999L).month(12).year(2099).CVV(999).build(),
+                CreditCardDto.builder().cardNumber(5555555555555555L).month(6).year(2030).CVV(555).build()
+        };
+
+        for (CreditCardDto cardDto : cards) {
+            User user = User.builder()
+                    .id((long) (Math.random() * 1000))
+                    .username("user" + cardDto.getCVV())
+                    .firstName("Test")
+                    .lastName("User")
+                    .creditCard(null)
+                    .build();
+
+            when(userRepository.findByUsername(user.getUsername())).thenReturn(Optional.of(user));
+            when(creditCardRepository.save(any(CreditCard.class))).thenAnswer(invocation -> {
+                CreditCard card = invocation.getArgument(0);
+                // Propriedade: saldo SEMPRE deve ser zero independente dos dados
+                assertEquals(0L, card.getAccountBalance());
+                return card;
+            });
+            when(userRepository.save(any(User.class))).thenReturn(user);
+
+            // Act
+            userService.addCreditCardToUser(user.getUsername(), cardDto);
+        }
+
+        // Assert - Propriedade validada para todos os cartões
+        verify(creditCardRepository, times(3)).save(any(CreditCard.class));
+    }
+
+    @Test
+    @DisplayName("TC31: Adicionar cartão com mês fevereiro (2)")
+    void shouldAddCreditCard_WithFebruaryMonth() {
+        // Arrange - Mês de fevereiro
+        CreditCardDto cardWithFebruary = CreditCardDto.builder()
+                .cardNumber(2345678901234567L)
+                .month(2) // Fevereiro
+                .year(2027)
+                .CVV(234)
+                .build();
+
+        CreditCard savedCard = CreditCard.builder()
+                .cardNumber(cardWithFebruary.getCardNumber())
+                .month(cardWithFebruary.getMonth())
+                .year(cardWithFebruary.getYear())
+                .CVV(cardWithFebruary.getCVV())
+                .accountBalance(0L)
+                .build();
+
+        when(userRepository.findByUsername(validUser.getUsername())).thenReturn(Optional.of(validUser));
+        when(creditCardRepository.save(any(CreditCard.class))).thenReturn(savedCard);
+        when(userRepository.save(any(User.class))).thenReturn(validUser);
+
+        // Act
+        User result = userService.addCreditCardToUser(validUser.getUsername(), cardWithFebruary);
+
+        // Assert
+        assertEquals(2, result.getCreditCard().getMonth());
+    }
+
+    @Test
+    @DisplayName("TC32: Adicionar cartão verificando que CreditCardRepository.save é chamado com dados corretos")
+    void shouldCallCreditCardRepositorySave_WithCorrectData() {
+        // Arrange
+        CreditCard savedCard = CreditCard.builder()
+                .id(1L)
+                .cardNumber(validCreditCardDto.getCardNumber())
+                .month(validCreditCardDto.getMonth())
+                .year(validCreditCardDto.getYear())
+                .CVV(validCreditCardDto.getCVV())
+                .accountBalance(0L)
+                .build();
+
+        when(userRepository.findByUsername(validUser.getUsername())).thenReturn(Optional.of(validUser));
+        when(creditCardRepository.save(any(CreditCard.class))).thenAnswer(invocation -> {
+            CreditCard card = invocation.getArgument(0);
+            
+            // Propriedade: dados passados ao save devem corresponder ao DTO
+            assertEquals(validCreditCardDto.getCardNumber(), card.getCardNumber());
+            assertEquals(validCreditCardDto.getMonth(), card.getMonth());
+            assertEquals(validCreditCardDto.getYear(), card.getYear());
+            assertEquals(validCreditCardDto.getCVV(), card.getCVV());
+            assertEquals(0L, card.getAccountBalance());
+            
+            return savedCard;
+        });
+        when(userRepository.save(any(User.class))).thenReturn(validUser);
+
+        // Act
+        userService.addCreditCardToUser(validUser.getUsername(), validCreditCardDto);
+
+        // Assert
+        verify(creditCardRepository, times(1)).save(any(CreditCard.class));
+    }
 }
