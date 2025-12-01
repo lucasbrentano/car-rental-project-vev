@@ -1,10 +1,10 @@
-package com.example.carrentalproject.controller;
+package com.example.carrentalproject.journey;
 
+import com.example.carrentalproject.controller.RegistrationController;
 import com.example.carrentalproject.dto.UserInDto;
 import com.example.carrentalproject.exception.ExistingEntityException;
 import com.example.carrentalproject.exception.WeakPasswordException;
 import com.example.carrentalproject.service.RegistrationService;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -20,11 +20,17 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.never;
 
+/**
+ * Step 1 - Testes de Registro de Usuário (POST /registration)
+ * Implementa 21 casos de teste usando técnicas de:
+ * - Particionamento de Equivalência
+ * - Análise de Valor Limite
+ * - Testes com Dublês (Mocks)
+ */
 @ExtendWith(MockitoExtension.class)
-@DisplayName("POST /registration - Testes de Registro de Usuário")
-class RegistrationControllerTest {
+@DisplayName("Step 1 - POST /registration - Testes de Registro de Usuário")
+class Step1RegistrationTest {
 
     @Mock
     private RegistrationService registrationService;
@@ -449,4 +455,3 @@ class RegistrationControllerTest {
         }
     }
 }
-

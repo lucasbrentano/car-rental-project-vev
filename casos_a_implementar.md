@@ -255,5 +255,148 @@ Lista consolidada de todos os casos de teste ainda NÃO implementados (❌), agr
 ❌ CT34 RetirarCarroMesmoUsuarioDuasVezes
 
 ---
+## Testes de Integração
+
+### Cenário 1: Jornada Completa de Sucesso (Happy Path)
+❌ IT01 JornadaCompletaUsuarioNovo
+- Registrar novo usuário
+- Adicionar cartão de crédito ao perfil
+- Consultar pacotes disponíveis
+- Consultar carros disponíveis
+- Criar pedido
+- Adicionar cartão para pagamento
+- Transferir dinheiro
+- Retirar carro
+- Valida: Fluxo end-to-end com banco de dados real
+
+### Cenário 2: Fluxo de Pagamento Completo
+❌ IT02 FluxoPagamentoCartaoCredito
+- Criar usuário e autenticar
+- Criar pedido
+- Adicionar cartão (POST /payment/addCreditCard)
+- Transferir valor exato (PUT /payment/moneyTransfer)
+- Verificar saldo atualizado no banco
+- Valida: Integração entre PaymentService, UserRepository, CreditCard
+
+❌ IT03 FluxoPagamentoComTroco
+- Criar pedido de R$ 500
+- Transferir R$ 1000
+- Verificar cálculo de troco
+- Validar status do pedido como "PAGO"
+- Valida: Lógica de negócio de troco + persistência
+
+### Cenário 3: Disponibilidade de Carros
+❌ IT04 ConsultarEReservarCarroDisponivel
+- Consultar carros disponíveis (GET /cars/available)
+- Criar pedido para carro específico
+- Verificar que carro fica indisponível
+- Consultar novamente e validar que carro não aparece
+- Valida: Sincronização entre OrderService e CarRepository
+
+❌ IT05 RetirarCarroAtualizaDisponibilidade
+- Criar pedido e pagar
+- Retirar carro (POST /delivery)
+- Verificar isAvailable = false no banco
+- Validar PlacedOrder criado com timestamps
+- Valida: Integração DeliveryService + CarRepository + OrderRepository
+
+### Cenário 4: Autenticação e Autorização
+❌ IT06 UsuarioNaoPodeAcessarRecursoSemToken
+- Tentar consultar /cars/packages sem autenticação
+- Esperar HTTP 401 ou 403
+- Valida: Spring Security com JWT
+
+❌ IT07 UsuarioSoRetiraProprioCarroPedido
+- Usuário A cria pedido
+- Usuário B tenta retirar carro do pedido de A
+- Esperar exceção ou HTTP 403
+- Valida: Autorização baseada em ownership
+
+### Cenário 5: Validação de Cartão de Crédito
+❌ IT08 AdicionarCartaoDuplicadoNaoPersiste
+- Adicionar cartão com número 1234567890123456
+- Tentar adicionar mesmo cartão novamente
+- Validar que apenas um registro existe no banco
+- Valida: Constraint UNIQUE ou lógica de duplicação
+
+❌ IT09 PagamentoSemCartaoCadastrado
+- Criar pedido
+- Tentar transferir dinheiro sem ter cartão
+- Esperar NoCreditCardException
+- Valida: Regra de negócio + tratamento de exceções
+
+### Cenário 6: Regras de Pacotes
+❌ IT10 NaoPodeRetirarCarroDePacoteDiferente
+- Criar pedido para pacote BASIC
+- Pagar e obter access key para BASIC
+- Tentar retirar carro do pacote PREMIUM
+- Esperar InvalidPackageException
+- Valida: Lógica de AccessKey + validação de pacote
+
+❌ IT11 ConsultarPacotesComPaginacaoEOrdenacao
+- Consultar página 0, tamanho 5, ordenado por preço ASC
+- Validar que retorna no máximo 5 pacotes
+- Validar ordenação crescente de preços
+- Valida: Pageable do Spring Data JPA
+
+### Cenário 7: Pedidos e Timestamps
+❌ IT12 CriarPedidoComHorasLimite
+- Criar pedido com hours = 1 (mínimo)
+- Criar pedido com hours = 720 (máximo)
+- Validar cálculo de preço correto
+- Valida: Lógica de cálculo + valor limite
+
+❌ IT13 RetirarCarroRegistraTimestampCorreto
+- Retirar carro às 14:00
+- Verificar PlacedOrder.startTime ~= 14:00
+- Verificar PlacedOrder.endTime = startTime + hours
+- Valida: LocalDateTime persistence + timezone
+
+### Cenário 8: Filtros e Buscas
+❌ IT14 FiltrarCarrosPorMultiplosCriterios
+- Filtrar por fuelType = GASOLINE, minPrice = 100, maxPrice = 500
+- Validar que todos resultados atendem critérios
+- Valida: Query methods do Spring Data + Specification
+
+❌ IT15 ConsultarCarrosComPaginacaoRetornaMetadata
+- Consultar página 1, tamanho 10
+- Validar Page.totalElements, totalPages, hasNext
+- Valida: PageImpl do Spring Data
+
+### Cenário 9: Edge Cases de Negócio
+❌ IT16 NaoPodeCriarPedidoSemCarrosDisponiveis
+- Marcar todos carros como isAvailable = false
+- Tentar criar pedido
+- Esperar UnavailableCarException
+- Valida: Validação de disponibilidade em tempo real
+
+❌ IT17 RegistroComEmailDuplicadoFalha
+- Registrar user1@example.com
+- Tentar registrar user1@example.com novamente
+- Esperar DuplicateEmailException ou constraint violation
+- Valida: Constraint UNIQUE no banco
+
+❌ IT18 TransferirDinheiroParaPedidoJaPago
+- Pagar pedido completamente
+- Tentar transferir novamente
+- Esperar OrderAlreadyPaidException
+- Valida: Idempotência de pagamento
+
+### Cenário 10: Transações e Rollback
+❌ IT19 FalhaAoRetirarCarroNaoAfetaBanco
+- Configurar mock para falhar em deliveryService.pickUpTheCar()
+- Tentar retirar carro
+- Verificar que isAvailable continua true (rollback)
+- Valida: @Transactional rollback
+
+❌ IT20 CriacaoPedidoComFalhaRollbackCompleto
+- Criar pedido mas simular falha ao salvar AccessKey
+- Verificar que Order não foi persistido
+- Verificar que Car continua disponível
+- Valida: Transação ACID + rollback em cascata
+
+---
 ## Totais
-Total casos não implementados: 226
+Total casos unitários não implementados: 226
+Total casos de integração não implementados: 20
+Total geral: 246
