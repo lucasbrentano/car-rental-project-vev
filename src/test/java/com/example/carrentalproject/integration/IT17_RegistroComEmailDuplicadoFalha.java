@@ -62,17 +62,22 @@ public class IT17_RegistroComEmailDuplicadoFalha {
 
     @Test
     @org.junit.jupiter.api.Order(1)
-    @DisplayName("LACUNA: Sistema permite email duplicado")
-    void permiteEmailDuplicado() {
+    @DisplayName("DEVE FALHAR: Sistema deve bloquear email duplicado")
+    void registroComEmailDuplicadoDeveFalhar() {
         // Primeiro usuário
         UserInDto user1 = UserInDto.builder()
                 .firstName("João")
                 .lastName("Silva")
                 .username("joao_teste_it17_1")
-                .email("duplicado@test.com")  // EMAIL DUPLICADO
+                .email("duplicado@test.com")
                 .password("Test12345")
                 .phone(999111222)
                 .build();
+
+        // Primeiro registro funciona
+        assertDoesNotThrow(() -> {
+            registrationService.registerUser(user1);
+        }, "Primeiro usuário registrado com sucesso");
 
         // Segundo usuário com MESMO EMAIL
         UserInDto user2 = UserInDto.builder()
@@ -84,26 +89,10 @@ public class IT17_RegistroComEmailDuplicadoFalha {
                 .phone(999333444)
                 .build();
 
-        // LACUNA: Ambos registros são aceitos
-        assertDoesNotThrow(() -> {
-            registrationService.registerUser(user1);
-        }, "Primeiro usuário registrado");
-
-        assertDoesNotThrow(() -> {
+        // BUG: Sistema deveria lançar exceção mas não lança
+        assertThrows(ExistingEntityException.class, () -> {
             registrationService.registerUser(user2);
-        }, "LACUNA DETECTADA: Segundo usuário com email duplicado foi aceito");
-
-        // Verificar que ambos existem
-        assertTrue(userRepository.findByUsername("joao_teste_it17_1").isPresent(),
-                "Usuário 1 existe");
-        assertTrue(userRepository.findByUsername("maria_teste_it17_1").isPresent(),
-                "Usuário 2 existe");
-
-        System.out.println("\n=== LACUNA DETECTADA ===");
-        System.out.println("✗ Sistema aceita 2 usuários com email 'duplicado@test.com'");
-        System.out.println("✗ RegistrationService NÃO valida email duplicado");
-        System.out.println("✗ Impossível recuperar senha por email");
-        System.out.println("========================\n");
+        }, "Sistema DEVERIA lançar ExistingEntityException para email duplicado");
     }
 
     @Test
@@ -196,49 +185,48 @@ public class IT17_RegistroComEmailDuplicadoFalha {
 
     @Test
     @org.junit.jupiter.api.Order(5)
-    @DisplayName("LACUNA EM ESCALA: 5 usuários com mesmo email")
+    @DisplayName("DEVE FALHAR: Apenas primeiro usuário deve ser aceito, demais devem falhar")
     void multiplosUsuariosComMesmoEmail() {
         String emailCompartilhado = "multiple@test.com";
 
-        // Criar 5 usuários com MESMO EMAIL
-        for (int i = 1; i <= 5; i++) {
+        // Primeiro usuário funciona
+        UserInDto user1 = UserInDto.builder()
+                .firstName("User1")
+                .lastName("Test1")
+                .username("user_it17_5_1")
+                .email(emailCompartilhado)
+                .password("Test12341")
+                .phone(999000001)
+                .build();
+
+        assertDoesNotThrow(() -> {
+            registrationService.registerUser(user1);
+        }, "Primeiro usuário com email registrado");
+
+        // Todos os outros devem falhar
+        for (int i = 2; i <= 5; i++) {
+            final int index = i;
             UserInDto user = UserInDto.builder()
                     .firstName("User" + i)
                     .lastName("Test" + i)
                     .username("user_it17_5_" + i)
-                    .email(emailCompartilhado)  // TODOS COM MESMO EMAIL
+                    .email(emailCompartilhado)  // MESMO EMAIL
                     .password("Test1234" + i)
                     .phone(999000000 + i)
                     .build();
 
-            assertDoesNotThrow(() -> {
+            assertThrows(ExistingEntityException.class, () -> {
                 registrationService.registerUser(user);
-            }, "Usuário " + i + " registrado com email duplicado");
+            }, "Usuário " + index + " com email duplicado DEVERIA falhar");
         }
-
-        // Verificar que todos 5 existem
-        long usuariosComEmailDuplicado = userRepository.findAll().stream()
-                .filter(u -> u.getEmail().equals(emailCompartilhado))
-                .count();
-
-        assertEquals(5, usuariosComEmailDuplicado,
-                "5 usuários com mesmo email existem no banco");
-
-        System.out.println("\n=== LACUNA EM ESCALA ===");
-        System.out.println("✗ 5 usuários registrados com email '" + emailCompartilhado + "'");
-        System.out.println("✗ Se qualquer um solicitar recuperação de senha:");
-        System.out.println("   - Qual usuário deve receber o email?");
-        System.out.println("   - Sistema não consegue identificar usuário único");
-        System.out.println("========================\n");
     }
 
     @Test
     @org.junit.jupiter.api.Order(6)
-    @DisplayName("IMPACTO REAL: Impossível recuperar senha por email")
-    void impossivelRecuperarSenhaPorEmail() {
+    @DisplayName("DEVE FALHAR: Apenas Ana registrada, demais devem ser rejeitados")
+    void validaUsuariosDiferentesNaoPodeCompartilharEmail() {
         String emailProblematico = "recovery@test.com";
 
-        // 4 usuários com mesmo email
         UserInDto user1 = UserInDto.builder()
                 .firstName("Ana")
                 .lastName("Costa")
@@ -248,6 +236,12 @@ public class IT17_RegistroComEmailDuplicadoFalha {
                 .phone(991111111)
                 .build();
 
+        // Primeiro funciona
+        assertDoesNotThrow(() -> {
+            registrationService.registerUser(user1);
+        }, "Ana registrada com sucesso");
+
+        // Todos os outros devem falhar
         UserInDto user2 = UserInDto.builder()
                 .firstName("Bruno")
                 .lastName("Silva")
@@ -275,30 +269,16 @@ public class IT17_RegistroComEmailDuplicadoFalha {
                 .phone(994444444)
                 .build();
 
-        // Todos registrados com sucesso (LACUNA)
-        assertDoesNotThrow(() -> {
-            registrationService.registerUser(user1);
+        assertThrows(ExistingEntityException.class, () -> {
             registrationService.registerUser(user2);
+        }, "Bruno com email duplicado DEVERIA falhar");
+
+        assertThrows(ExistingEntityException.class, () -> {
             registrationService.registerUser(user3);
+        }, "Carlos com email duplicado DEVERIA falhar");
+
+        assertThrows(ExistingEntityException.class, () -> {
             registrationService.registerUser(user4);
-        }, "4 usuários com mesmo email registrados");
-
-        System.out.println("\n=== IMPACTO REAL ===");
-        System.out.println("\nCENÁRIO: Usuário esqueceu senha");
-        System.out.println("  1. Sistema solicita email: '" + emailProblematico + "'");
-        System.out.println("  2. Busca no banco: 4 usuários encontrados!");
-        System.out.println("     - ana_it17_6");
-        System.out.println("     - bruno_it17_6");
-        System.out.println("     - carlos_it17_6");
-        System.out.println("     - diana_it17_6");
-        System.out.println("  3. Sistema NÃO consegue identificar qual resetar");
-        System.out.println("\nRECUPERAÇÃO DE SENHA: IMPOSSÍVEL");
-        System.out.println("\nSOLUÇÃO NECESSÁRIA:");
-        System.out.println("  - Email deve ser UNIQUE assim como username");
-        System.out.println("  - Adicionar findByEmail() no UserRepository");
-        System.out.println("  - Validar email duplicado no registerUser()");
-        System.out.println("====================\n");
-
-        assertTrue(true, "Impacto real da lacuna demonstrado");
+        }, "Diana com email duplicado DEVERIA falhar");
     }
 }

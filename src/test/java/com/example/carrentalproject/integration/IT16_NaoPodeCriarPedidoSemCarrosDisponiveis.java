@@ -137,7 +137,7 @@ public class IT16_NaoPodeCriarPedidoSemCarrosDisponiveis {
 
     @Test
     @org.junit.jupiter.api.Order(1)
-    @DisplayName("LACUNA: Sistema aceita pedido sem nenhum carro disponível")
+    @DisplayName("DEVE FALHAR: Sistema deve rejeitar pedido sem nenhum carro disponível")
     void deveRejeitarPedidoSemCarrosDisponiveis() {
         // Verificar que NÃO existem carros
         long totalCarros = carRepository.findAll().stream()
@@ -145,25 +145,15 @@ public class IT16_NaoPodeCriarPedidoSemCarrosDisponiveis {
                 .count();
         assertEquals(0, totalCarros, "Não deve existir nenhum carro deste pacote");
 
-        // LACUNA: Sistema aceita pedido sem verificar disponibilidade
-        assertDoesNotThrow(() -> {
+        // BUG: Sistema deveria lançar exceção mas não lança
+        assertThrows(RuntimeException.class, () -> {
             orderService.submitOrder(testPackage.getPackageName(), 24);
-        }, "LACUNA DETECTADA: submitOrder() aceita pedido sem carros disponíveis");
-
-        User userReloaded = userRepository.findByUsername("carlos_teste_it16").orElseThrow();
-        assertNotNull(userReloaded.getAccessKey(), 
-                "Sistema criou AccessKey mesmo sem carros disponíveis");
-
-        System.out.println("\n=== LACUNA DETECTADA ===");
-        System.out.println("✗ Sistema aceita pedido sem verificar disponibilidade de carros");
-        System.out.println("✗ OrderService.submitOrder() não valida Car.isAvailable");
-        System.out.println("✗ AccessKey criado: " + userReloaded.getAccessKey().getId());
-        System.out.println("========================\n");
+        }, "Sistema DEVERIA lançar UnavailableCarException quando não há carros disponíveis");
     }
 
     @Test
     @org.junit.jupiter.api.Order(2)
-    @DisplayName("LACUNA: Sistema aceita pedido quando todos carros estão indisponíveis")
+    @DisplayName("DEVE FALHAR: Sistema deve rejeitar pedido quando todos carros estão indisponíveis")
     void deveRejeitarPedidoComTodosCarrosIndisponiveis() {
         // Criar 3 carros INDISPONÍVEIS
         for (int i = 1; i <= 3; i++) {
@@ -185,20 +175,10 @@ public class IT16_NaoPodeCriarPedidoSemCarrosDisponiveis {
                 .count();
         assertEquals(0, carrosDisponiveis, "Todos os carros devem estar indisponíveis");
 
-        // LACUNA: Sistema aceita pedido sem verificar isAvailable
-        assertDoesNotThrow(() -> {
+        // BUG: Sistema deveria lançar exceção mas não lança
+        assertThrows(RuntimeException.class, () -> {
             orderService.submitOrder(testPackage.getPackageName(), 24);
-        }, "LACUNA DETECTADA: submitOrder() aceita pedido com carros indisponíveis");
-
-        User userReloaded = userRepository.findByUsername("carlos_teste_it16").orElseThrow();
-        assertNotNull(userReloaded.getAccessKey(),
-                "Sistema criou AccessKey com carros indisponíveis");
-
-        System.out.println("\n=== LACUNA DETECTADA ===");
-        System.out.println("✗ Sistema aceita pedido sem validar Car.isAvailable");
-        System.out.println("✗ 3 carros existem mas TODOS com isAvailable=false");
-        System.out.println("✗ AccessKey criado: " + userReloaded.getAccessKey().getId());
-        System.out.println("========================\n");
+        }, "Sistema DEVERIA lançar UnavailableCarException quando todos carros estão indisponíveis");
     }
 
     @Test
@@ -239,30 +219,14 @@ public class IT16_NaoPodeCriarPedidoSemCarrosDisponiveis {
 
     @Test
     @org.junit.jupiter.api.Order(4)
-    @DisplayName("ANÁLISE: Diferença entre lista vazia e carros indisponíveis")
+    @DisplayName("DEVE FALHAR: Ambos cenários (vazio e indisponível) devem rejeitar pedido")
     void analiseDiferencaEntreVazioEIndisponivel() {
-        System.out.println("\n=== ANÁLISE DE COMPORTAMENTO ===");
-        
-        // CENÁRIO 1: Zero carros
-        long totalCarros1 = carRepository.findAll().stream()
-                .filter(car -> car.getCarPackage().getId().equals(testPackage.getId()))
-                .count();
-        System.out.println("\nCENÁRIO 1: Zero carros no banco");
-        System.out.println("  Total de carros: " + totalCarros1);
-        System.out.println("  Resultado: submitOrder() ACEITA pedido");
-        
-        assertDoesNotThrow(() -> {
-            User user1 = userRepository.findByUsername("carlos_teste_it16").orElseThrow();
-            user1.setAccessKey(null); // Reset para testar novamente
-            userRepository.save(user1);
+        // CENÁRIO 1: Zero carros - deve falhar
+        assertThrows(RuntimeException.class, () -> {
             orderService.submitOrder(testPackage.getPackageName(), 24);
-        });
+        }, "CENÁRIO 1: Sem carros deve lançar exceção");
 
-        // CENÁRIO 2: Carros existem mas isAvailable=false
-        User userReset = userRepository.findByUsername("carlos_teste_it16").orElseThrow();
-        userReset.setAccessKey(null);
-        userRepository.save(userReset);
-
+        // CENÁRIO 2: Carros existem mas isAvailable=false - deve falhar
         Car carroIndisponivel = Car.builder()
                 .brand("Fiat")
                 .model("Uno")
@@ -273,26 +237,13 @@ public class IT16_NaoPodeCriarPedidoSemCarrosDisponiveis {
                 .build();
         carRepository.save(carroIndisponivel);
 
-        long totalCarros2 = carRepository.findAll().stream()
-                .filter(car -> car.getCarPackage().getId().equals(testPackage.getId()))
-                .count();
-        long carrosDisponiveis2 = carRepository.findAll().stream()
-                .filter(car -> car.getCarPackage().getId().equals(testPackage.getId()))
-                .filter(Car::getIsAvailable)
-                .count();
+        User userReset = userRepository.findByUsername("carlos_teste_it16").orElseThrow();
+        userReset.setAccessKey(null);
+        userRepository.save(userReset);
 
-        System.out.println("\nCENÁRIO 2: Carros existem com isAvailable=false");
-        System.out.println("  Total de carros: " + totalCarros2);
-        System.out.println("  Carros disponíveis: " + carrosDisponiveis2);
-        System.out.println("  Resultado: submitOrder() ACEITA pedido");
-
-        assertDoesNotThrow(() -> {
+        assertThrows(RuntimeException.class, () -> {
             orderService.submitOrder(testPackage.getPackageName(), 24);
-        });
-
-        System.out.println("\n✗ LACUNA: Em AMBOS cenários sistema aceita pedido");
-        System.out.println("✗ OrderService NÃO valida disponibilidade antes de criar AccessKey");
-        System.out.println("================================\n");
+        }, "CENÁRIO 2: Carros indisponíveis deve lançar exceção");
     }
 
     @Test
